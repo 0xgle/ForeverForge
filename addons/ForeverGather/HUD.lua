@@ -7,10 +7,13 @@ local function skin(frame,bg,border,edge)
 end
 
 function FG:InitHUD()
+ -- Radar HUD removed by design. We keep only the compact Field Bar and lightweight wrappers
+ -- so older buttons/commands do not error out.
  self:InitFieldBar()
 end
 
 function FG:ToggleHUD(force)
+ -- Redirect old HUD interactions to the compact Field Bar.
  if self.ToggleFieldBar then
   self:ToggleFieldBar(force)
   if force==false then
