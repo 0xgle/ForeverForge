@@ -56,6 +56,10 @@ local function nextPin(parent)
  p:Hide()
  return p
 end
+-- Native World Map pins -----------------------------------------------------
+-- WorldMapFrame is a MapCanvas. Pins must be positioned with MapCanvasPinMixin:SetPosition(x,y),
+-- not by multiplying coordinates by ScrollContainer.Child dimensions. The latter drifts when
+-- the canvas is zoomed/panned/scaled and was the cause of wrong locations under the M map.
 ForeverGatherWorldMapPinMixin = CreateFromMixins(MapCanvasPinMixin)
 
 function ForeverGatherWorldMapPinMixin:OnLoad()
@@ -156,6 +160,7 @@ function WorldProvider:RefreshAllData()
   end
  end
 
+ -- Native invisible anchors keep route lines glued to MapCanvas through zoom/pan.
  FG.worldRouteAnchors={}
  local route=FG.db.route
  if FG.db.profile.showRoute and route and route.mapID==mapID then
@@ -210,6 +215,7 @@ function FG:DrawWorldRoute(mapID)
   l:SetEndPoint("CENTER",anchors[1],"CENTER",0,0)
  end
 
+ -- Highlight the live leg from player -> NEXT using native MapCanvas anchors.
  local nextIndex=math.max(1,math.min(r.current or 1,#anchors))
  local nextAnchor=anchors[nextIndex]
  if self.worldPlayerAnchor and nextAnchor then
@@ -271,8 +277,10 @@ function FG:ProjectToMinimapRaw(mapID,px,py,x,y,viewRadius,halfW,halfH)
  local nInstance,nwx,nwy=self:WorldPos(mapID,x,y)
  local xDist,yDist
  if pInstance and nInstance and pInstance==nInstance and pwx and nwx then
+  -- Match HereBeDragons minimap convention exactly: player minus node.
   xDist,yDist=pwx-nwx,pwy-nwy
  else
+  -- Fallback for maps where world coordinates are unavailable.
   xDist,yDist=(px-x)*1000,(py-y)*1000
  end
  local d=math.sqrt(xDist*xDist+yDist*yDist)
@@ -291,6 +299,7 @@ end
 
 function FG:ProjectToMinimap(mapID,px,py,x,y,viewRadius,halfW,halfH)
  local sx,sy,d,dist=self:ProjectToMinimapRaw(mapID,px,py,x,y,viewRadius,halfW,halfH)
+ -- Learned gather nodes are terrain-anchored. Never float normal node pins on the edge.
  if not sx or dist>.90 then return nil,nil,d,0 end
  return sx,sy,d,1
 end
@@ -299,6 +308,8 @@ function FG:ProjectNextToMinimap(mapID,px,py,x,y,viewRadius,halfW,halfH)
  local sx,sy,d,dist=self:ProjectToMinimapRaw(mapID,px,py,x,y,viewRadius,halfW,halfH)
  if not sx then return end
  if dist<=.86 then return sx,sy,d,false,0 end
+ -- Only the active NEXT target may clamp to the minimap edge. This keeps direction visible
+ -- while all ordinary learned nodes remain anchored to terrain and disappear off-screen.
  local len=math.sqrt(sx*sx+sy*sy)
  if len<=0 then return 0,0,d,false,0 end
  local edgeX,edgeY=sx/len*(halfW*.84),sy/len*(halfH*.84)
@@ -362,6 +373,8 @@ function FG:DrawMinimapRoute(mapID,px,py,viewRadius,halfW,halfH)
   end
  end
  if r.loop and #pts>2 then local a,b=projected[#pts],projected[1]; if a and b then local l=acquireLine(miniLines,self.minimapLayer); l:SetColorTexture(self.C.cyan[1],self.C.cyan[2],self.C.cyan[3],.18); l:SetThickness(self.db.profile.routeThickness or 1.25); l:SetStartPoint("CENTER",Minimap,a.x,a.y); l:SetEndPoint("CENTER",Minimap,b.x,b.y) end end
+ -- Always keep the navigation leg visible. If NEXT is outside the minimap, clip the
+ -- line to the edge and finish it with the directional edge arrow.
  local np=self:GetNextRoutePoint()
  if np then
   local nx,ny,_,isEdge=self:ProjectNextToMinimap(mapID,px,py,np.x,np.y,viewRadius,halfW,halfH)
@@ -374,3 +387,4 @@ function FG:DrawMinimapRoute(mapID,px,py,viewRadius,halfW,halfH)
   end
  end
 end
+

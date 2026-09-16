@@ -1,0 +1,11 @@
+FOREVER GATHER — REFERENCE PROJECTS
+
+This build contains original ForeverGather code and original artwork. No third-party addon code or artwork is bundled.
+
+Studied as architecture/product references:
+- GatherMate2 (GPLv2+) — robust gathering event patterns and node-map concepts.
+- Routes — route/clustering/TSP product concepts. ForeverGather uses its own lightweight clustering, nearest-neighbour and 2-opt implementation.
+- FarmHud — farming HUD product concept. ForeverGather uses an original standalone radar HUD and does not copy the game minimap.
+- TomTom — optional waypoint integration.
+
+The GatherMate2 import feature reads a user's already-loaded GatherMate2 SavedVariables at runtime.

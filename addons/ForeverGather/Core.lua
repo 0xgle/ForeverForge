@@ -63,6 +63,8 @@ function FG:WorldPos(mapID,x,y)
  if not C_Map or not C_Map.GetWorldPosFromMapPos or not CreateVector2D then return end
  local instance,p=C_Map.GetWorldPosFromMapPos(mapID,CreateVector2D(x,y))
  if p then
+  -- C_Map vectors use the opposite axis order from UnitPosition/world-map math.
+  -- HereBeDragons uses this same swap: worldX = vector.y, worldY = vector.x.
   return instance,p.y,p.x
  end
 end
@@ -309,6 +311,7 @@ E:SetScript("OnEvent",function(_,ev,arg)
   ForeverGatherDB=deepMerge(FG.defaults,ForeverGatherDB or {}); FG.db=ForeverGatherDB; FG:Migrate(); FG.visited={}; FG.visibleCache={}; FG.spatial={}; FG.dataRevision=1
   FG.db.meta.visualMapVersion=FG.db.meta.visualMapVersion or 0
   if FG.db.meta.visualMapVersion<1 then
+   -- RC8 map-first visual migration: learned markers become small hollow rings so Blizzard's live tracking dot stays visible.
    FG.db.profile.pinScale=.78; FG.db.profile.pinAlpha=.78; FG.db.profile.routeThickness=1.25
    FG.db.meta.visualMapVersion=1
   end
