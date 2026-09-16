@@ -1,0 +1,25 @@
+## Interface: 120100, 120001, 11509
+## Title: ForeverBags
+## Notes: Premium one-window inventory, bank, alts and discovery manager for WoW: Forever and compatible clients.
+## Author: M8 Labs
+## Version: 0.9.0-beta1
+## SavedVariables: ForeverBagsDB
+## IconTexture: Interface\\AddOns\\ForeverBags\\Media\\Icons\\bag.tga
+## Category: Bags & Inventory
+
+Localization\\enUS.lua
+Localization\\plPL.lua
+Core\\Init.lua
+Core\\Compat.lua
+Core\\Database.lua
+Core\\Search.lua
+Core\\Data.lua
+Features\\Discoveries.lua
+Features\\Merchant.lua
+Features\\Ownership.lua
+UI\\Media.lua
+UI\\ItemButton.lua
+UI\\Settings.lua
+UI\\Main.lua
+UI\\Minimap.lua
+Bindings.lua

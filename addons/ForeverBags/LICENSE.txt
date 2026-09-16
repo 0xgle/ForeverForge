@@ -1,0 +1,5 @@
+Copyright (c) 2026 M8 Labs. All rights reserved.
+
+The ForeverBags source code and original media assets in this package may not be redistributed, republished, sold, sublicensed, or incorporated into another addon without prior written permission from the copyright holder.
+
+World of Warcraft and related marks are trademarks of Blizzard Entertainment. ForeverBags is an independent fan-made addon and is not affiliated with or endorsed by Blizzard Entertainment.
