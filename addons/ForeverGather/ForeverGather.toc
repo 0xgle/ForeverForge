@@ -2,7 +2,7 @@
 ## Title: |cffF2C66DForever Gather|r |cff36D5DB• Route Atlas|r
 ## Notes: Premium gathering intelligence, map learning, route guidance and minimap/world map helper for Mining, Herbalism and Skinning.
 ## Author: 0xgle
-## Version: 2.2.0-classic-era
+## Version: 2.2.0
 ## SavedVariables: ForeverGatherDB
 ## OptionalDeps: GatherMate2, TomTom
 ## IconTexture: Interface\AddOns\ForeverGather\Media\FG_Logo.tga
