@@ -62,7 +62,9 @@ end
 function FG:WorldPos(mapID,x,y)
  if not C_Map or not C_Map.GetWorldPosFromMapPos or not CreateVector2D then return end
  local instance,p=C_Map.GetWorldPosFromMapPos(mapID,CreateVector2D(x,y))
- if p then return instance,p.y,p.x end
+ if p then
+  return instance,p.y,p.x
+ end
 end
 function FG:GetPlayerWorldPos()
  if not UnitPosition then return end
