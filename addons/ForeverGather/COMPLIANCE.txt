@@ -1,0 +1,16 @@
+FOREVER GATHER — DESIGN / COMPLIANCE NOTES
+==========================================
+
+The addon is intentionally local-first and passive:
+- no automated movement
+- no automated targeting
+- no automated casting
+- no protected-action execution
+- no combat decision engine
+- no background network/API calls
+- no advertisements or in-game monetization prompts
+- no required external executable
+- no obfuscated source code
+
+Smart Routes are visual suggestions calculated only from locally known gathering locations.
+The player retains full control over movement and every gameplay action.
