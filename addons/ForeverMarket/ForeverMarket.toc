@@ -1,0 +1,19 @@
+## Interface: 11509
+## Title: |cffd4ad6bForeverMarket|r
+## Notes: ForeverForge Auction House: market, selling, shopping lists and local price memory.
+## Author: 0xgle
+## Version: 1.1.2-beta1
+## SavedVariables: ForeverMarketDB
+## OptionalDeps: ForeverCore
+## X-Forever-Suite: 1
+## X-Category: Auction House
+## X-License: All Rights Reserved
+Core.lua
+Database.lua
+Theme.lua
+Market.lua
+Sell.lua
+Inventory.lua
+UI.lua
+UIViews.lua
+Native.lua

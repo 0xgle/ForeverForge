@@ -45,7 +45,8 @@ function Data:ScanBags(bagList, source)
                 local item = {
                     source = source or "bags", bag = bag, slot = slot, itemID = info.itemID,
                     link = info.link or FB.API:GetItemLink(bag, slot), icon = info.icon, count = info.count or 1,
-                    quality = info.quality, locked = info.locked, noValue = info.noValue, bound = info.bound,
+                    quality = info.quality, locked = info.locked, readable = info.readable, lootable = info.lootable,
+                    noValue = info.noValue, bound = info.bound,
                     isQuest = isQuest and true or false, isNew = FB.API:IsNewItem(bag, slot), live = true,
                     order = (#out + 1),
                 }

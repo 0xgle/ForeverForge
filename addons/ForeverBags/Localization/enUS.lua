@@ -2,6 +2,7 @@ local _, FB = ...
 FB.L = FB.L or {}
 local L = FB.L
 L.ADDON_NAME = "ForeverBags"
+L.YOUR_MONEY = "Your money"
 L.ALL_ITEMS = "All Items"
 L.EQUIPMENT = "Equipment"
 L.CONSUMABLES = "Consumables"

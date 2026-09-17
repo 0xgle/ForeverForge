@@ -1,0 +1,4 @@
+<Bindings>
+  <Binding name="FOREVERCHAT_TOGGLE" header="FOREVERCHAT">if ForeverChat then ForeverChat:Toggle() end</Binding>
+  <Binding name="FOREVERCHAT_SETTINGS">if ForeverChat then ForeverChat:Show(); ForeverChat:ToggleSettings(true) end</Binding>
+</Bindings>

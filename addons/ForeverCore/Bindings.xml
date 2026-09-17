@@ -1,0 +1,3 @@
+<Bindings>
+    <Binding name="FOREVERCORE_TOGGLE" header="FOREVERCORE">ForeverCore_Toggle()</Binding>
+</Bindings>

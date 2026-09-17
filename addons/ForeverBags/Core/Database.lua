@@ -11,6 +11,7 @@ local DEFAULTS = {
         minimap = true,
         minimapAngle = 220,
         showEmptySlots = true,
+        nativeBagIntegration = true,
         recentSeconds = 600,
     },
     characters = {},

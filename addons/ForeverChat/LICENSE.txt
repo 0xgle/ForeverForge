@@ -1,0 +1,8 @@
+ForeverChat
+Copyright (c) 2026 0xgle. All rights reserved.
+Wszelkie prawa zastrzeżone.
+
+Permission is granted to install and use this build for personal testing.
+Redistribution, commercial use and distribution of modified versions require
+permission from 0xgle, except as permitted by applicable law.
+Third-party trademarks belong to their respective owners.

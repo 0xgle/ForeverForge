@@ -1,7 +1,12 @@
 local ADDON_NAME, FB = ...
 _G.ForeverBags = FB
 FB.name = ADDON_NAME
-FB.version = "0.9.0-beta1"
+FB.version = "0.9.5-beta2"
+FB.author = "0xgle"
+FB.copyright = "© 2026 0xgle. All rights reserved."
+FB.projectID = WOW_PROJECT_ID
+FB.isClassicEra = WOW_PROJECT_CLASSIC and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC or false
+FB.isMainline = WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE or false
 FB.modules = FB.modules or {}
 FB.callbacks = FB.callbacks or {}
 FB.state = FB.state or { bankOpen = false, merchantOpen = false, lastLootSource = nil, lastLootAt = 0 }

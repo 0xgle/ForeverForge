@@ -1,14 +1,15 @@
 local ADDON, FG = ...
 _G.ForeverGather = FG
 
-FG.VERSION = "2.2.0-classic-era"
-FG.SCHEMA = 7
+FG.VERSION = "3.0.0-rc1-era"
+FG.SCHEMA = 8
 FG.MEDIA = "Interface\\AddOns\\ForeverGather\\Media\\"
 FG.C = {
- bg={0.024,0.067,0.086,0.985}, panel={0.031,0.106,0.125,0.985}, panel2={0.043,0.145,0.173,0.985},
- gold={0.949,0.776,0.427,1}, cyan={0.212,0.835,0.859,1}, text={0.863,0.906,0.910,1}, muted={0.471,0.592,0.616,1},
- green={0.314,0.902,0.659,1}, red={0.92,0.35,0.31,1}, border={0.482,0.341,0.133,1}, orange={0.95,0.56,0.24,1}
+ bg={.025,.042,.060,1},panel={.035,.063,.078,1},panel2={.047,.086,.102,1},
+ gold={.84,.68,.40,1},cyan={.38,.79,.76,1},text={.91,.93,.91,1},muted={.57,.66,.70,1},
+ green={.31,.90,.66,1},red={.92,.35,.31,1},border={.18,.26,.28,1},orange={.95,.56,.24,1}
 }
+
 FG.KINDS = {
  mining={label="Mining", pin=FG.MEDIA.."Pin_Mining.tga", fallback="Interface\\Icons\\Trade_Mining"},
  herbalism={label="Herbalism", pin=FG.MEDIA.."Pin_Herb.tga", fallback="Interface\\Icons\\Trade_Herbalism"},
@@ -32,7 +33,7 @@ FG.defaults = {
  session={mining=0,herbalism=0,skinning=0,started=0,last=nil,archived=false,loot={},zones={}},
  sessionHistory={},
  route=nil,
- meta={schema=7,firstRun=true,created=0,lastVersion="",lastLogin=0},
+ meta={schema=8,firstRun=true,created=0,lastVersion="",lastLogin=0},
 }
 
 local function deepMerge(src,dst)
@@ -141,7 +142,7 @@ function FG:FindNearby(mapID,kind,name,x,y)
  for gx=cx-1,cx+1 do for gy=cy-1,cy+1 do
   local cell=idx.cells[gx..":"..gy]
   if cell then for _,r in ipairs(cell) do
-   local compatible=(r.name==name) or (r.source=="GatherMate2" and string.find(r.name or "","Imported",1,true)) or name=="Unknown" or r.name=="Unknown"
+   local compatible=(r.name==name) or name=="Unknown" or r.name=="Unknown"
    if compatible then
     local d=self:Distance(mapID,x,y,r.x,r.y)
     if d<=radius and (not bestd or d<bestd) then best,bestd=r,d end
@@ -165,7 +166,7 @@ function FG:AddObservation(kind,name,mapID,x,y,source,opts)
   b[id]=r
  else
   local total=math.max(r.count or 0,1); r.x=((r.x or x)*total+x)/(total+1); r.y=((r.y or y)*total+y)/(total+1)
-  if (r.name=="Unknown" or r.source=="GatherMate2") and name~="Unknown" then r.name=name end
+  if r.name=="Unknown" and name~="Unknown" then r.name=name end
   r.npcID=r.npcID or opts.npcID; r.guid=r.guid or opts.guid
  end
  if r.last and r.last>0 then
@@ -176,7 +177,7 @@ function FG:AddObservation(kind,name,mapID,x,y,source,opts)
   end
  end
  r.count=(r.count or 0)+1; r.hits=(r.hits or 0)+1; r.last=now
- if source and source~="GatherMate2" then r.source=source end
+ if source then r.source=source end
  self:InvalidateCaches(mapID,kind)
  if not opts.noStats then
   self.db.stats[kind]=(self.db.stats[kind] or 0)+1
@@ -203,8 +204,8 @@ function FG:Count(kind,mapID)
  return n
 end
 function FG:Confidence(r)
- local c=r.count or 1; local imported=r.source=="GatherMate2"
- if imported and c<=1 then return .24,"IMPORTED" end
+ local c=r.count or 1
+ if r.source=="imported" and c<=1 then return .42,"IMPORTED" end
  if c>=10 then return 1,"MASTERED" elseif c>=6 then return .88,"VERY HIGH" elseif c>=3 then return .72,"HIGH" elseif c>=2 then return .58,"CONFIRMED" else return .42,"LEARNED" end
 end
 function FG:RespawnText(r)
@@ -278,7 +279,7 @@ function FG:Migrate()
  end
  self.db.nextID=math.max(self.db.nextID or 1,nextID); self.db.meta.schema=FG.SCHEMA; self.db.meta.created=self.db.meta.created or self:Now(); self.db.meta.lastVersion=FG.VERSION
  self.db.sessionHistory=self.db.sessionHistory or {}; self.db.analytics.loot=self.db.analytics.loot or {}
- if old<7 then self:Print("Database upgraded to schema "..FG.SCHEMA..".") end
+ if old<8 then self:Print("Database upgraded to schema "..FG.SCHEMA..".") end
 end
 
 SLASH_FOREVERGATHER1="/fg"; SLASH_FOREVERGATHER2="/forevergather"
@@ -287,20 +288,21 @@ SlashCmdList.FOREVERGATHER=function(msg)
  if lower=="reset" then FG:ResetSession(); FG:Print("Session reset.")
  elseif lower=="refresh" then FG:InvalidateCaches(); FG:RefreshPins(); FG:Print("Pins refreshed.")
  elseif lower=="hud" or lower=="bar" then FG:ToggleFieldBar()
- elseif lower=="bar" then if FG.ToggleFieldBar then FG:ToggleFieldBar() end
+
  elseif lower=="route" then FG:BuildRoute()
  elseif lower=="route clear" then FG:ClearRoute()
- elseif lower=="route next" then FG:WaypointNextRoute()
- elseif lower=="import gathermate" then FG:ImportGatherMate2()
+ elseif lower=="route next" then FG:AdvanceRoute()
+ elseif lower=="import" then if FG.ShowImport then FG:ShowImport() end
+ elseif lower=="export all" then if FG.ShowExport then FG:ShowExport(nil) end
  elseif lower=="focus clear" then FG:ClearFocus(); FG:Print("Focus cleared.")
  elseif string.sub(lower,1,6)=="focus " then FG.db.profile.focusResource=raw:sub(7); FG:InvalidateCaches(); FG:RefreshPins(); FG:Print("Focus: "..FG.db.profile.focusResource)
  elseif lower=="diag" then if FG.ShowDiagnostics then FG:ShowDiagnostics() end
- elseif lower=="export" then if FG.ShowExport then FG:ShowExport() end
+ elseif lower=="export" then if FG.ShowExport then FG:ShowExport(C_Map.GetBestMapForUnit("player")) end
  elseif lower=="prune" then FG:Print("Data Doctor removed "..FG:PruneInvalid().." invalid records.")
  elseif lower=="test mine" then FG:AddObservation("mining","Test Copper Vein")
  elseif lower=="test herb" then FG:AddObservation("herbalism","Test Peacebloom")
  elseif lower=="test skin" then FG:AddObservation("skinning","Test Wolf")
- elseif lower=="help" then FG:Print("/fg • bar • route • route clear • route next • focus <name> • focus clear • reset • import gathermate • diag • export • prune • test mine/herb/skin")
+ elseif lower=="help" then FG:Print("/fg • bar • route • route clear • route next • focus <name> • focus clear • reset • import • export • export all • diag • prune • test mine/herb/skin")
  else FG:ToggleUI() end
 end
 

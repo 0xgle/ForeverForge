@@ -1,0 +1,1 @@
+PASS: 67 assertions; Lua load, all panels, native session, query throttle, stale rows, confirmations, selling and migration.

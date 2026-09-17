@@ -1,0 +1,13 @@
+0.3.0-beta1 — 2026-09-17
+- Sanctum: nowy nagłówek, tło i 8 wygenerowanych ikon; 10 tekstur TGA.
+- Nowy układ 1000x650 z dopasowaniem skali do ekranu.
+- Naprawione kotwice kolumn ustawień i opisów w panelu bocznym.
+- Brak nachodzenia LFG na przycisk Report Danger.
+- Wstrzymanie widoku przy przewijaniu historii i licznik nowych wiadomości.
+- Kopiowanie filtrowanej rozmowy, blokada położenia i skróty klawiszowe.
+- Ukrywanie panelu bocznego rzeczywiście poszerza obszar wiadomości.
+- Radar: świeże wpisy, unikalne osoby, odświeżanie po upływie czasu.
+- Pełne nazwy realmów przy odpowiedziach i rozróżnianiu szeptów.
+- Czyszczenie pamięci filtra duplikatów; ograniczenie częstotliwości HELLO.
+- Migracja historii i preferencji 0.1.x / 0.2.x.
+- Opcjonalna integracja z ForeverCore API v1; samodzielne działanie.

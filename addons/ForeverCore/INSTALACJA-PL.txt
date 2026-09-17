@@ -1,0 +1,50 @@
+FOREVERCORE — THE SANCTUM | by 0xgle
+Wersja 1.0.0-rc1 | Classic Era 1.15.9
+
+INSTALACJA
+1. Zamknij WoW.
+2. Wypakuj folder ForeverCore do:
+   World of Warcraft\_classic_era_\Interface\AddOns\
+3. Poprawna ścieżka końcowa:
+   Interface\AddOns\ForeverCore\ForeverCore.toc
+4. Uruchom grę, włącz ForeverCore na liście AddOns.
+5. Wpisz /fc albo kliknij turkusowy kryształ przy minimapie.
+
+Folder DeveloperTools jest tylko dla programisty. Nie trzeba go instalować.
+ForeverBags, ForeverGather i inne addony instalujesz osobno, jak dotychczas.
+Ta paczka nie nadpisuje ich plików ani danych.
+
+OBSŁUGA
+Sanctum: podgląd kolekcji i szybkie otwieranie addonów.
+Addons: wyszukiwanie, ulubione, włączanie i wyłączanie.
+Profiles: zapisywanie zestawów aktywnych addonów oraz import/eksport.
+Diagnostics: pamięć, raport, historia zmian, cofnięcie ostatniej operacji.
+Appearance: skala okna, przycisk minimapy, reset położenia.
+
+ZMIANY ADDONÓW
+Kliknij Enabled/Disabled > Review > Apply changes > Reload UI.
+Przed zatwierdzeniem zobaczysz też wymagane zależności.
+Zmiana dotyczy bieżącej postaci. W walce operacje są blokowane.
+Profile są dostępne na całym koncie, ale nie kopiują ustawień wewnętrznych addonów.
+Core-only mode wyłącza pozostałe addony Forever po zatwierdzeniu i reloadzie.
+Undo last apply przygotowuje cofnięcie ostatniej zatwierdzonej zmiany.
+
+KOMENDY
+/fc — otwórz/zamknij
+/fc addons — lista addonów
+/fc profiles — profile
+/fc diag — diagnostyka
+/fc minimap — pokaż/ukryj przycisk minimapy
+/fc reset — przywróć środek ekranu i skalę
+
+PRZED PUBLIKACJĄ
+To kompletny release candidate, nie deklaracja testu w działającym WoW.
+Sprawdzono logikę i układ poza grą. Pozostał test w kliencie Classic Era.
+Zgodność z klientem Forever trzeba sprawdzić osobno; sama zmiana numeru TOC
+nie gwarantuje zgodności API.
+
+W razie błędu wpisz /console scriptErrors 1, potem /reload.
+Zrób zrzut błędu i dołącz raport Diagnostics > Copy report.
+Po testach możesz wyłączyć okna błędów: /console scriptErrors 0.
+
+© 2026 0xgle. Wszelkie prawa zastrzeżone.

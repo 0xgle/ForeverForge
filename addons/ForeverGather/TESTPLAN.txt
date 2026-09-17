@@ -1,50 +1,31 @@
-FOREVER GATHER RC1 — 15 MINUTE CLASSIC ERA TEST
-================================================
+AUTOMATED / LOCAL — PASSED
+- Parse and load all 12 Lua modules using Lua 5.1.
+- Create empty Expedition, atlas, settings and HUD through mock WoW frames.
+- 26 observations across mining, herbalism and skinning.
+- Export/import FGX v2 round-trip without duplicate nodes.
+- Build a 24-stop route and populate/click the atlas.
+- Last-stop completion remains idempotent over repeated updates.
+- Loop route wraps to first stop; overlapping-arrival latch avoids repeats.
+- HUD toggles and collapses to 48 logical pixels; expanded height is 172.
+- Window fitting at 800x600 with 110% preference.
+- Import, export, diagnostics and long-name toast construction.
+- Visual review from actual Lua widget geometry: Expedition, atlas, settings, HUD.
+- Verify TOC file references, TGA dimensions/bit depth, ZIP integrity and no stale art.
 
-0. Replace the old ForeverGather folder completely.
-1. In game: /console scriptErrors 1
-2. /reload
-3. /fg
+REQUIRED IN-GAME BEFORE MARKING STABLE
+[ ] Clean install, log in, /fg, /reload: no Lua errors.
+[ ] Upgrade on a backed-up existing database: counts and history preserved.
+[ ] Enable /console scriptErrors 1 during testing.
+[ ] Gather a real ore, herb and skinnable creature; confirm one correct record each.
+[ ] Failed/interrupted casts do not create locations.
+[ ] Minimap markers and world-map positions remain correct while zooming/panning.
+[ ] Build route, walk through arrivals, skip manually, finish and loop.
+[ ] Route in another zone shows waiting state and correct zone.
+[ ] Long names remain bounded; test UI scale and display resolution.
+[ ] Main window/HUD dragging and collapsed state survive /reload.
+[ ] Import FGX v2 and export all; malformed header is rejected.
+[ ] Test with and without TomTom, and with other UI addons.
+[ ] Test in combat and entering/leaving instances.
+[ ] Verify separately on the actual Forever client before claiming support.
 
-A. UI SMOKE TEST
-- /fg test mine
-- /fg test herb
-- /fg test skin
-Expected: three learned records, toast, minimap pins, World Map pins.
-- /fg hud
-Expected: premium radar opens and pins are visible.
-- /fg route
-Expected: route builds if two or more visible test/real locations exist.
-
-B. MINING
-- Mine 3 real veins.
-Expected: each successful loot creates/confirms exactly one Mining location.
-- Walk away, return, mine the same spawn later.
-Expected: observation count increases rather than creating a duplicate nearby.
-
-C. HERBALISM
-- Gather 3 real herbs.
-Expected: same behavior as Mining, correct herb names where the client supplies them.
-
-D. SKINNING
-- Kill, loot and skin 3 beasts.
-Expected: Skinning locations are recorded only after the skinning loot window.
-- Open World Map.
-Expected: Skinning appears as heat-density visualization when enabled.
-
-E. PERSISTENCE
-- /reload
-Expected: all learned locations remain.
-- Log out/in.
-Expected: data remains and previous session is archived.
-
-F. DIAGNOSTICS
-- /fg diag
-Expected: Recorded counter rises after successful gathers and Invalid = 0.
-If a real gather fails to record, screenshot the entire Diagnostics window immediately after the attempt.
-
-G. OPTIONAL INTEGRATIONS
-- With GatherMate2 loaded: /fg import gathermate
-Expected: imported points appear in the correct zones and do not create impossible coordinates.
-- With TomTom loaded: build route, then /fg route next
-Expected: a TomTom waypoint is created for the current NEXT stop.
+No in-game test was performed in the build environment.

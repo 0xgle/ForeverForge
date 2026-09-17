@@ -1,11 +1,10 @@
-FOREVER GATHER — REFERENCE PROJECTS
+Forever Gatherer — Expedition 3.0
+Author: 0xgle
 
-This build contains original ForeverGather code and original artwork. No third-party addon code or artwork is bundled.
-
-Studied as architecture/product references:
-- GatherMate2 (GPLv2+) — robust gathering event patterns and node-map concepts.
-- Routes — route/clustering/TSP product concepts. ForeverGather uses its own lightweight clustering, nearest-neighbour and 2-opt implementation.
-- FarmHud — farming HUD product concept. ForeverGather uses an original standalone radar HUD and does not copy the game minimap.
-- TomTom — optional waypoint integration.
-
-The GatherMate2 import feature reads a user's already-loaded GatherMate2 SavedVariables at runtime.
+Based on the provided ForeverGather 2.7.0 project; original MIT notice retained.
+No external addon libraries bundled. TomTom integration is optional.
+Header, emblem, material and profession atlas: generated specifically for this
+release using the built-in image generation tool. Runtime TGA conversions and
+atlas slices are included in Media. Hollow map markers are original geometric
+assets. Fonts are referenced from the WoW client, not redistributed.
+World of Warcraft belongs to Blizzard Entertainment. This is an unofficial addon.

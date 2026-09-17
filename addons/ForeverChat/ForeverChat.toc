@@ -1,0 +1,17 @@
+## Interface: 11509
+## Title: ForeverChat
+## Notes: Premium Classic Hardcore chat HUD, LFG Radar and communication intelligence.
+## Author: 0xgle
+## Version: 0.3.0-beta1
+## SavedVariables: ForeverChatDB
+## X-Category: Chat/Communication
+## X-License: All Rights Reserved
+## X-Credits: by 0xgle
+
+## OptionalDeps: ForeverCore
+## X-Forever-Suite: 1
+## IconTexture: Interface\AddOns\ForeverChat\Media\Chat
+
+ForeverChat.lua
+Sanctum.lua
+Bindings.xml

@@ -1,0 +1,15 @@
+Copyright (c) 2026 0xgle. All rights reserved.
+
+Permission is granted to download, install and use this addon free of charge
+for personal gameplay. Redistribution, modification for publication,
+commercial use and republishing require prior written permission from 0xgle.
+The copyright and author notices must not be removed.
+
+This software is provided "AS IS", without warranty of any kind, express or
+implied, including warranties of merchantability, fitness for a particular
+purpose and noninfringement. To the extent permitted by applicable law, the
+author shall not be liable for claims or damages arising from its use.
+
+World of Warcraft and Blizzard are trademarks of their respective owners.
+ForeverCore is an independent addon and is not affiliated with or endorsed
+by Blizzard Entertainment. Original artwork was created with AI assistance.

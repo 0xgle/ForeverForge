@@ -1,0 +1,17 @@
+## Interface: 11509
+## Title: ForeverCore | The Sanctum
+## Notes: Your Forever addon command center. Profiles, launcher and diagnostics. By 0xgle.
+## Author: 0xgle
+## Version: 1.0.0-rc1
+## SavedVariables: ForeverCoreDB
+## SavedVariablesPerCharacter: ForeverCoreCharDB
+## IconTexture: Interface\AddOns\ForeverCore\Media\Core.tga
+## Category: Interface Enhancements
+## X-Forever-Suite: 1
+Core.lua
+Manager.lua
+Profiles.lua
+Integrations.lua
+Theme.lua
+UI.lua
+Boot.lua

@@ -1,13 +1,14 @@
 ## Interface: 11509
-## Title: |cffF2C66DForever Gather|r |cff36D5DB• Route Atlas|r
-## Notes: Premium gathering intelligence, map learning, route guidance and minimap/world map helper for Mining, Herbalism and Skinning.
+## Title: Forever Gatherer | Expedition
+## Notes: Gathering journal, routes, resource atlas and compact HUD. By 0xgle.
 ## Author: 0xgle
-## Version: 2.2.0
+## Version: 3.0.0-rc1
 ## SavedVariables: ForeverGatherDB
-## OptionalDeps: GatherMate2, TomTom
-## IconTexture: Interface\AddOns\ForeverGather\Media\FG_Logo.tga
+## OptionalDeps: TomTom
+## IconTexture: Interface\AddOns\ForeverGather\Media\Emblem.tga
 ## Category: Professions
 Core.lua
+Theme.lua
 Data.lua
 Analytics.lua
 Tracker.lua
@@ -17,4 +18,5 @@ Map.lua
 WorldMap.xml
 HUD.lua
 DataIO.lua
+Atlas.lua
 UI.lua

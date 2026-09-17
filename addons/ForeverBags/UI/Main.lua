@@ -51,6 +51,7 @@ function FB:BuildMainFrame()
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
     FB.Media:SetBackdrop(f, 0.985)
+    FB.Media:ApplyWindowArt(f)
     table.insert(UISpecialFrames, "ForeverBagsFrame")
     self.frame = f
     self.currentView = self.currentView or "bags"
@@ -73,16 +74,21 @@ function FB:BuildMainFrame()
     local titleIcon = f:CreateTexture(nil, "ARTWORK")
     titleIcon:SetSize(54,54); titleIcon:SetPoint("TOPLEFT", 14, -10); titleIcon:SetTexture(FB.Media:Icon("bag"))
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-    title:SetPoint("TOPLEFT", titleIcon, "TOPRIGHT", 4, -6); title:SetText("ForeverBags"); title:SetTextColor(1,0.82,0.35)
+    title:SetPoint("TOPLEFT", titleIcon, "TOPRIGHT", 4, -6); title:SetText("ForeverBags"); title:SetTextColor(0.96,0.85,0.62)
+    title:SetShadowColor(0,0,0,1); title:SetShadowOffset(1,-1)
     local sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 2, -3); sub:SetText("inventory • bank • alts • discoveries"); sub:SetTextColor(0.45,0.78,0.9)
+    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 2, -3); sub:SetText("inventory • bank • alts • discoveries"); sub:SetTextColor(0.57,0.67,0.68)
+    local credit = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    credit:SetPoint("LEFT", title, "RIGHT", 8, -1); credit:SetText("by 0xgle")
+    credit:SetWidth(58); credit:SetWordWrap(false); credit:SetJustifyH("LEFT")
+    credit:SetTextColor(0.58,0.58,0.58)
 
     local close = MakeButton(f, 34, 34); close:SetPoint("TOPRIGHT", -12, -12)
-    local ct = close:CreateTexture(nil, "ARTWORK"); ct:SetAllPoints(); ct:SetTexture(FB.Media:Icon("close"))
+    local ct = close:CreateTexture(nil, "ARTWORK"); ct:SetSize(24,24); ct:SetPoint("CENTER"); ct:SetTexture(FB.Media:Icon("close"))
     close:SetScript("OnClick", function() f:Hide() end)
 
     local settings = MakeButton(f, 34, 34); settings:SetPoint("RIGHT", close, "LEFT", -8, 0)
-    local st = settings:CreateTexture(nil, "ARTWORK"); st:SetAllPoints(); st:SetTexture(FB.Media:Icon("settings"))
+    local st = settings:CreateTexture(nil, "ARTWORK"); st:SetSize(26,26); st:SetPoint("CENTER"); st:SetTexture(FB.Media:Icon("settings"))
     settings:SetScript("OnClick", function() FB.SettingsUI:Toggle() end)
 
     local sort = MakeButton(f, 126, 34); sort:SetPoint("RIGHT", settings, "LEFT", -10, 0)
@@ -103,15 +109,15 @@ function FB:BuildMainFrame()
         self.placeholder:SetShown(FB.searchText == "" and not self:HasFocus())
         FB:Debounce("search", 0.04, function() FB:Refresh() end)
     end)
-    search:SetScript("OnEditFocusGained", function(self) self.placeholder:Hide() end)
-    search:SetScript("OnEditFocusLost", function(self) self.placeholder:SetShown((self:GetText() or "") == "") end)
+    search:SetScript("OnEditFocusGained", function(self) self.placeholder:Hide(); self:SetBackdropBorderColor(0.65,0.57,0.37,1) end)
+    search:SetScript("OnEditFocusLost", function(self) self.placeholder:SetShown((self:GetText() or "") == ""); self:SetBackdropBorderColor(0.32,0.42,0.46,1) end)
     search:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     search:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
     self.searchBox = search
 
     local sidebar = NewFrame("Frame", nil, f)
     sidebar:SetPoint("TOPLEFT", 14, -78); sidebar:SetPoint("BOTTOMLEFT", 14, 62); sidebar:SetWidth(172)
-    FB.Media:SetBackdrop(sidebar, 0.82)
+    FB.Media:SetBackdrop(sidebar, 0.72)
     self.sidebar = sidebar
     self.categoryButtons = {}
     local y = -10
@@ -119,11 +125,25 @@ function FB:BuildMainFrame()
         local meta = CATEGORY_META[i]
         local b = MakeButton(sidebar, 152, 42); b:SetPoint("TOPLEFT", 10, y); y = y - 46
         local icon = b:CreateTexture(nil,"ARTWORK"); icon:SetSize(30,30); icon:SetPoint("LEFT",5,0); icon:SetTexture(FB.Media:Icon(meta.icon))
-        local txt = b:CreateFontString(nil,"OVERLAY","GameFontNormal"); txt:SetPoint("LEFT",icon,"RIGHT",5,0); txt:SetPoint("RIGHT",-5,0); txt:SetJustifyH("LEFT"); txt:SetText(meta.label())
+        local txt = b:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall"); txt:SetPoint("LEFT",icon,"RIGHT",5,0); txt:SetPoint("RIGHT",-29,0); txt:SetJustifyH("LEFT"); txt:SetText(meta.label())
+        txt:SetWordWrap(true); txt:SetHeight(32); b.text=txt
+        b.count=b:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
+        b.count:SetPoint("RIGHT",-6,0); b.count:SetWidth(24); b.count:SetJustifyH("RIGHT"); b.count:SetTextColor(0.55,0.65,0.65)
         b.id=meta.id
         b:SetScript("OnClick", function(self) FB.currentCategory=self.id; FB:Refresh() end)
         self.categoryButtons[meta.id]=b
     end
+
+    local wallet = NewFrame("Frame", nil, sidebar)
+    wallet:SetPoint("BOTTOMLEFT", 10, 10); wallet:SetPoint("BOTTOMRIGHT", -10, 10); wallet:SetHeight(48)
+    FB.Media:SetBackdrop(wallet, 0.85)
+    local walletLabel = wallet:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
+    walletLabel:SetPoint("TOPLEFT",8,-7); walletLabel:SetText(L.YOUR_MONEY or "Your money")
+    walletLabel:SetTextColor(0.68,0.72,0.70)
+    self.walletValue = wallet:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
+    self.walletValue:SetPoint("BOTTOMLEFT",8,8); self.walletValue:SetPoint("BOTTOMRIGHT",-6,8)
+    self.walletValue:SetJustifyH("LEFT"); self.walletValue:SetWordWrap(false)
+    self:RefreshMoney()
 
     local scroll = CreateFrame("ScrollFrame", "ForeverBagsScrollFrame", f, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 12, 0)
@@ -146,21 +166,22 @@ function FB:BuildMainFrame()
         local b=MakeButton(footer, 108, 30)
         if not last then b:SetPoint("LEFT",6,0) else b:SetPoint("LEFT",last,"RIGHT",5,0) end
         local ic=b:CreateTexture(nil,"ARTWORK"); ic:SetSize(24,24); ic:SetPoint("LEFT",4,0); ic:SetTexture(FB.Media:Icon(iconName))
-        local tx=b:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); tx:SetPoint("LEFT",ic,"RIGHT",2,0); tx:SetPoint("RIGHT",-3,0); tx:SetText(label)
+        local tx=b:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); tx:SetPoint("LEFT",ic,"RIGHT",2,0); tx:SetPoint("RIGHT",-3,0); tx:SetText(label); b.text=tx
         b.id=id; b:SetScript("OnClick", function(self) FB.currentView=self.id; FB.currentCategory="all"; FB:Refresh() end)
         self.viewButtons[id]=b; last=b
     end
 
-    local stats = f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    stats:SetPoint("BOTTOMRIGHT", -24, 27); stats:SetJustifyH("RIGHT"); stats:SetTextColor(0.9,0.9,0.9)
+    local stats = footer:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    stats:SetWidth(270); stats:SetHeight(32); stats:SetPoint("RIGHT", footer, "RIGHT", -10, 0); stats:SetJustifyH("RIGHT"); stats:SetTextColor(0.72,0.77,0.77)
     self.stats = stats
 
-    local sell = MakeButton(f, 105, 30); sell:SetPoint("BOTTOMRIGHT", -20, 65); AddText(sell, L.SELL_JUNK, "GameFontNormalSmall")
+    -- Merchant action belongs inside the footer so it never covers category bars/items.
+    local sell = MakeButton(footer, 105, 30); sell:SetPoint("RIGHT", footer, "RIGHT", -6, 0); AddText(sell, L.SELL_JUNK, "GameFontNormalSmall")
     sell:SetScript("OnClick", function() FB.Merchant:SellJunk(IsShiftKeyDown()) end)
     self.sellButton = sell
 
     self.noItems = child:CreateFontString(nil,"OVERLAY","GameFontDisableLarge")
-    self.noItems:SetPoint("TOP", 0, -80); self.noItems:SetText(L.NO_ITEMS); self.noItems:Hide()
+    self.noItems:SetPoint("TOP", 0, -80); self.noItems:SetWidth(560); self.noItems:SetJustifyH("CENTER"); self.noItems:SetText(L.NO_ITEMS); self.noItems:Hide()
 
     f:SetScript("OnShow", function() FB:Refresh() end)
     return f
@@ -190,8 +211,10 @@ function FB:GetPooledHeader(index)
     local h=self.headerPool[index]
     if not h then
         h=CreateFrame("Frame",nil,self.scrollChild,BackdropTemplateMixin and "BackdropTemplate" or nil)
-        h:SetHeight(24); h:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8"}); h:SetBackdropColor(0.04,0.15,0.19,0.78)
-        h.text=h:CreateFontString(nil,"OVERLAY","GameFontNormal"); h.text:SetPoint("LEFT",8,0); h.text:SetTextColor(1,0.82,0.35)
+        h:SetHeight(24); h:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8"}); h:SetBackdropColor(0.07,0.105,0.115,0.85)
+        h.text=h:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); h.text:SetPoint("LEFT",10,0); h.text:SetPoint("RIGHT",-45,0); h.text:SetJustifyH("LEFT"); h.text:SetTextColor(0.85,0.78,0.61)
+        h.count=h:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall"); h.count:SetPoint("RIGHT",-10,0); h.count:SetTextColor(0.55,0.66,0.67)
+        local line=h:CreateTexture(nil,"ARTWORK"); line:SetColorTexture(0.46,0.40,0.27,0.38); line:SetHeight(1); line:SetPoint("BOTTOMLEFT"); line:SetPoint("BOTTOMRIGHT")
         self.headerPool[index]=h
     end
     return h
@@ -203,14 +226,22 @@ function FB:GetEmptySlot(index)
         e=CreateFrame("Frame",nil,self.scrollChild,BackdropTemplateMixin and "BackdropTemplate" or nil)
         e:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8",edgeFile="Interface\\Buttons\\WHITE8x8",edgeSize=1})
         e:SetBackdropColor(0.025,0.035,0.045,0.75); e:SetBackdropBorderColor(0.17,0.22,0.24,0.9)
-        local tx=e:CreateTexture(nil,"ARTWORK"); tx:SetAllPoints(); tx:SetTexture(FB.Media:Texture("slot_frame")); tx:SetAlpha(0.35)
+        local tx=e:CreateTexture(nil,"ARTWORK"); tx:SetAllPoints(); tx:SetTexture(FB.Media:Texture("slot_frame")); tx:SetAlpha(0.12)
         self.emptySlots[index]=e
     end
     return e
 end
 
+function FB:RefreshMoney()
+    if not self.walletValue then return end
+    local copper = math.max(0, math.floor(tonumber(GetMoney and GetMoney()) or (self.char and self.char.money) or 0))
+    self.walletValue:SetText(string.format("|cffffd36a%dg|r  |cffd5dce5%02ds|r  |cffdca175%02dc|r",
+        math.floor(copper/10000), math.floor(copper/100)%100, copper%100))
+end
+
 function FB:Refresh()
     if not self.frame then return end
+    self:RefreshMoney()
     self.frame:SetScale(self.settings.scale or 1)
     for id,b in pairs(self.categoryButtons) do FB.Media:SetButtonBackdrop(b, id==self.currentCategory) end
     for id,b in pairs(self.viewButtons) do FB.Media:SetButtonBackdrop(b, id==self.currentView) end
@@ -220,11 +251,22 @@ function FB:Refresh()
 
     local items, free, total, cached = self.Data:GetView(self.currentView)
     local filtered={}
+    local categoryCounts={}
+    for id in pairs(self.categoryButtons) do categoryCounts[id]=0 end
     for i=1,#items do
         local it=items[i]
         self.Data:Enrich(it)
         it.favorite=self:IsFavorite(it.itemID); it.tag=self:GetTag(it.itemID)
-        if self:CategoryMatch(it,self.currentCategory) and self.Search:Matches(it,self.searchText) then table.insert(filtered,it) end
+        if self.Search:Matches(it,self.searchText) then
+            for id in pairs(categoryCounts) do
+                if self:CategoryMatch(it,id) then categoryCounts[id]=categoryCounts[id]+1 end
+            end
+            if self:CategoryMatch(it,self.currentCategory) then table.insert(filtered,it) end
+        end
+    end
+    for id,b in pairs(self.categoryButtons) do
+        local count=categoryCounts[id] or 0
+        b.count:SetText(count > 999 and "999+" or tostring(count))
     end
     self.Data:Sort(filtered)
 
@@ -245,7 +287,7 @@ function FB:Refresh()
         if #list==0 then return end
         if self.settings.sectioned and self.currentCategory=="all" and self.currentView~="discoveries" then
             headerIndex=headerIndex+1
-            local h=self:GetPooledHeader(headerIndex); h:SetPoint("TOPLEFT",x0,y); h:SetPoint("TOPRIGHT",-4,y); h.text:SetText(label.."  ("..#list..")"); h:Show(); y=y-30
+            local h=self:GetPooledHeader(headerIndex); h:SetPoint("TOPLEFT",x0,y); h:SetPoint("TOPRIGHT",-4,y); h.text:SetText(label); h.count:SetText(tostring(#list)); h:Show(); y=y-30
         end
         local col=0
         for i=1,#list do
@@ -284,13 +326,20 @@ function FB:Refresh()
     self.noItems:SetShown(#filtered==0)
     if self.currentView=="bags" then
         local junk=FB.Merchant:GetJunkValue()
-        self.stats:SetText(string.format("%s: %d / %d   •   %s: %s",L.FREE_SLOTS,free or 0,total or 0,L.JUNK_VALUE,FB:FormatMoney(junk)))
+        self.stats:SetText(string.format("%s: %d / %d\n%s: %s",L.FREE_SLOTS,free or 0,total or 0,L.JUNK_VALUE,FB:FormatMoney(junk)))
     elseif self.currentView=="bank" then
         self.stats:SetText((cached and (L.BANK_CACHED.."   •   ") or "")..tostring(#filtered).." items")
     else
         self.stats:SetText(tostring(#filtered).." items")
     end
-    self.sellButton:SetShown(self.state.merchantOpen and self.currentView=="bags")
+    local showSell = self.state.merchantOpen and self.currentView=="bags"
+    self.sellButton:SetShown(showSell)
+    self.stats:ClearAllPoints()
+    if showSell then
+        self.stats:SetPoint("RIGHT", self.sellButton, "LEFT", -12, 0)
+    else
+        self.stats:SetPoint("RIGHT", self.footer, "RIGHT", -10, 0)
+    end
 end
 
 function FB:Toggle()
@@ -307,6 +356,10 @@ FB:On("LOGIN", function()
         if msg=="settings" or msg=="config" then FB.SettingsUI:Toggle()
         elseif msg=="bank" then FB.currentView="bank"; FB:BuildMainFrame():Show(); FB:Refresh()
         elseif msg=="reset" then FB.settings.windowPoint=nil; if FB.frame then FB.frame:ClearAllPoints(); FB.frame:SetPoint("CENTER") end
+        elseif msg=="version" then
+            FB:Print(FB.version .. " • Interface " .. tostring(select(4, GetBuildInfo())) .. " • project " .. tostring(WOW_PROJECT_ID))
+        elseif msg=="native" then
+            FB:Print("native integration=" .. tostring(FB.settings.nativeBagIntegration ~= false) .. " • ToggleBackpack=" .. tostring(type(_G.ToggleBackpack) == "function") .. " • C_Container=" .. tostring(C_Container ~= nil))
         else FB:Toggle() end
     end
 end)
@@ -316,3 +369,4 @@ FB:On("FILTER_CHANGED", function() if FB.frame and FB.frame:IsShown() then FB:Re
 FB:On("SETTINGS_CHANGED", function() if FB.frame then FB:Refresh() end end)
 FB:On("MERCHANT_OPEN", function() if FB.frame and FB.frame:IsShown() then FB:Refresh() end end)
 FB:On("MERCHANT_CLOSE", function() if FB.frame and FB.frame:IsShown() then FB:Refresh() end end)
+FB:On("PLAYER_MONEY", function() FB:RefreshMoney() end)

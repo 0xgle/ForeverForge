@@ -1,0 +1,19 @@
+## Interface: 11509
+## Title: ForeverMacroHelper
+## Notes: Curated Classic Era macro library for every class. PvE + PvP. One-click install. Created by 0xgle.
+## Author: 0xgle
+## Version: 0.1.0-beta
+## SavedVariables: ForeverMacroHelperDB
+## IconTexture: Interface\\Icons\\INV_Misc_Note_02
+## Category: Combat
+## X-Forever-Suite: 1
+
+Localization\\enUS.lua
+Localization\\plPL.lua
+Core\\Init.lua
+Core\\Database.lua
+UI\\Media.lua
+Data\\Macros.lua
+Core\\MacroEngine.lua
+UI\\Main.lua
+UI\\Minimap.lua

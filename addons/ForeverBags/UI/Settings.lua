@@ -8,6 +8,7 @@ local function MakePanel(parent)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     FB.Media:SetBackdrop(f, 0.98)
+    FB.Media:ApplyWindowArt(f)
     f:Hide()
     table.insert(UISpecialFrames, "ForeverBagsSettingsFrame")
     return f
@@ -20,8 +21,6 @@ local function MakeTextButton(parent, text, width)
     b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     b.text:SetPoint("CENTER")
     b.text:SetText(text)
-    b:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(0.15,0.85,1,1) end)
-    b:SetScript("OnLeave", function(self) self:SetBackdropBorderColor(0.42,0.34,0.2,0.9) end)
     return b
 end
 
@@ -81,6 +80,24 @@ function S:Build()
     end
     empty:SetScript("OnClick", function() FB.settings.showEmptySlots = not FB.settings.showEmptySlots; updateEmpty(); FB:Fire("SETTINGS_CHANGED") end)
     updateEmpty()
+
+    local nativeBags = MakeTextButton(f, "", 346)
+    nativeBags:SetPoint("TOPLEFT", 22, -248)
+    local function updateNativeBags()
+        nativeBags.text:SetText((FB.settings.nativeBagIntegration ~= false and "✓ " or "") .. "Use ForeverBags for WoW bag button + bag key")
+    end
+    nativeBags:SetScript("OnClick", function()
+        FB.settings.nativeBagIntegration = not (FB.settings.nativeBagIntegration ~= false)
+        updateNativeBags()
+        FB:Fire("SETTINGS_CHANGED")
+    end)
+    updateNativeBags()
+
+    local credit = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    credit:SetPoint("BOTTOM", 0, 58)
+    credit:SetWidth(346); credit:SetHeight(30); credit:SetJustifyH("CENTER")
+    credit:SetText("ForeverBags " .. tostring(FB.version) .. " • by 0xgle\n© 2026 0xgle. All rights reserved.")
+    credit:SetTextColor(0.55,0.55,0.55)
 
     local reset = MakeTextButton(f, "Reset window", 140)
     reset:SetPoint("BOTTOMLEFT", 22, 22)

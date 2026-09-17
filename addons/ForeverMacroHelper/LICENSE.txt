@@ -1,0 +1,8 @@
+ForeverMacroHelper
+Copyright © 2026 0xgle. All rights reserved.
+
+This software and its original source code, design, assets and documentation are the property of 0xgle unless otherwise noted.
+
+No permission is granted to redistribute, repackage, sell, sublicense or publish modified versions without the copyright holder's permission.
+
+World of Warcraft and related names and game assets are trademarks and/or property of Blizzard Entertainment. This addon is an independent fan-made project and is not affiliated with or endorsed by Blizzard Entertainment.

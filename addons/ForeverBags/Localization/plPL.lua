@@ -3,6 +3,7 @@ if GetLocale() ~= "plPL" then return end
 FB.L = FB.L or {}
 local L = FB.L
 L.ADDON_NAME = "ForeverBags"
+L.YOUR_MONEY = "Twoje pieniądze"
 L.ALL_ITEMS = "Wszystkie"
 L.EQUIPMENT = "Ekwipunek"
 L.CONSUMABLES = "Materiały zużywalne"

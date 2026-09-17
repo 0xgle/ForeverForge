@@ -1,78 +1,52 @@
 local ADDON,FG=...
-
-local function skin(frame,bg,border,edge)
- frame:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8X8",edgeFile="Interface\\Buttons\\WHITE8X8",edgeSize=edge or 1})
- frame:SetBackdropColor(unpack(bg))
- frame:SetBackdropBorderColor(unpack(border))
-end
-
-function FG:InitHUD()
- -- Radar HUD removed by design. We keep only the compact Field Bar and lightweight wrappers
- -- so older buttons/commands do not error out.
- self:InitFieldBar()
-end
-
-function FG:ToggleHUD(force)
- -- Redirect old HUD interactions to the compact Field Bar.
- if self.ToggleFieldBar then
-  self:ToggleFieldBar(force)
-  if force==false then
-   self:Print("Radar HUD removed. Using Minimap + World Map + route lines instead.")
-  end
- end
-end
-
-function FG:UpdateHUD()
- if self.UpdateFieldBar then self:UpdateFieldBar() end
-end
-
+local T,C=FG.Theme,FG.C
+function FG:InitHUD()self:InitFieldBar()end
+function FG:ToggleHUD(force)self:ToggleFieldBar(force)end
+function FG:UpdateHUD()self:UpdateFieldBar()end
 function FG:InitFieldBar()
  if self.fieldBar then return end
- local f=CreateFrame("Frame","ForeverGatherFieldBar",UIParent,"BackdropTemplate")
- f:SetSize(540,38)
- f:SetPoint("BOTTOM",0,188)
- f:SetFrameStrata("MEDIUM")
- skin(f,{.008,.03,.038,.92},{.10,.34,.36,.52},1)
- f:EnableMouse(false)
- self.fieldBar=f
-
- local top=f:CreateTexture(nil,"ARTWORK")
- top:SetColorTexture(self.C.cyan[1],self.C.cyan[2],self.C.cyan[3],.20)
- top:SetPoint("TOPLEFT",1,-1)
- top:SetPoint("TOPRIGHT",-1,-1)
- top:SetHeight(1)
-
- local g=f:CreateTexture(nil,"ARTWORK")
- g:SetTexture(self.MEDIA.."FG_Logo.tga")
- g:SetSize(28,28)
- g:SetPoint("LEFT",7,0)
-
- local txtLine=f:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
- txtLine:SetPoint("LEFT",42,0)
- txtLine:SetPoint("RIGHT",-10,0)
- txtLine:SetJustifyH("LEFT")
- txtLine:SetTextColor(unpack(self.C.text))
- f.txt=txtLine
-
- if not self.db.profile.showFieldBar then f:Hide() end
- self:UpdateFieldBar()
+ local f=CreateFrame('Frame','ForeverGatherFieldBar',UIParent,'BackdropTemplate');self.fieldBar=f
+ f:SetSize(342,172);f:SetPoint('RIGHT',UIParent,'RIGHT',-36,80);f:SetFrameStrata('MEDIUM');T.Skin(f,C.bg)
+ f.material=T.Art(f,'Material',1,1,340,170,'BACKGROUND');f.material:SetAlpha(.35)
+ local art=T.Art(f,'Header',1,1,340,48,'BACKGROUND');art:SetTexCoord(0,1,.30,.75)
+ T.Art(f,'Emblem',10,7,34)
+ f.zone=T.Text(f,'EXPEDITION',52,7,218,20,13,C.gold)
+ T.Text(f,'by 0xgle',52,27,155,14,9,C.muted)
+ local drag=CreateFrame('Frame',nil,f);drag:SetPoint('TOPLEFT');drag:SetSize(270,48);T.Movable(f,'expeditionHUDPosition',drag)
+ T.Button(f,'-',278,10,24,26,function()FG.db.profile.hudCollapsed=not FG.db.profile.hudCollapsed;FG:UpdateFieldBar()end)
+ T.Button(f,'x',308,10,24,26,function()FG:ToggleFieldBar(false)end)
+ f.body=CreateFrame('Frame',nil,f);f.body:SetAllPoints()
+ f.icon=T.Art(f.body,'Icon_Route',12,61,48)
+ f.name=T.Text(f.body,'Ready to explore',72,58,186,22,13,C.text)
+ f.distance=T.Text(f.body,'',262,59,68,21,13,C.gold);f.distance:SetJustifyH('RIGHT')
+ f.detail=T.Text(f.body,'Gather to discover locations',72,82,258,18,10,C.muted)
+ T.Rule(f.body,12,117,318)
+ f.stats=T.Text(f.body,'',12,126,196,20,11,C.cyan)
+ T.Button(f,'Open',222,126,51,30,function()FG:ToggleUI()end)
+ T.Button(f,'Next',279,126,51,30,function()FG:AdvanceRoute()end)
+ T.Fit(f,342,172,self.db.profile.expeditionHUDScale or 1)
+ f:SetShown(self.db.profile.showFieldBar);self:UpdateFieldBar()
 end
-
 function FG:ToggleFieldBar(force)
- local show=force
- if show==nil then show=not self.db.profile.showFieldBar end
- self.db.profile.showFieldBar=show
- if self.fieldBar then
-  if show then self.fieldBar:Show(); self:UpdateFieldBar() else self.fieldBar:Hide() end
- end
+ if force==nil then force=not self.db.profile.showFieldBar end
+ self.db.profile.showFieldBar=force
+ if self.fieldBar then self.fieldBar:SetShown(force);self:UpdateFieldBar()end
 end
-
 function FG:UpdateFieldBar(nearby)
- if not self.fieldBar or not self.db.profile.showFieldBar then return end
- local mapID=self:GetPos()
- local np,nd=self:GetNextRoutePoint()
- local nextText=np and string.format("Next %.0f yd",nd or 0) or "No route"
- local route=self.db.route
- local routeText=route and string.format("%d stops", #(route.points or {})) or "Route off"
- self.fieldBar.txt:SetText(string.format("|cffe1b457%s|r   |cff3acdd5•|r   %d nearby   |cff3acdd5•|r   %.1f/h   |cff3acdd5•|r   %s   |cff3acdd5•|r   %s",self:GetZoneName(mapID),nearby or 0,self:GetSessionRate(),routeText,nextText))
+ local f=self.fieldBar;if not f or not self.db.profile.showFieldBar then return end
+ if type(nearby)=='number' then self.hudNearby=nearby end
+ local collapsed=self.db.profile.hudCollapsed;f:SetHeight(collapsed and 48 or 172);f.material:SetHeight(collapsed and 46 or 170);f.body:SetShown(not collapsed)
+ f.zone:SetText(self:GetZoneName(C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit('player')))
+ local p,d,i=self:GetNextRoutePoint();local r=self.db.route
+ if p then
+  f.icon:SetTexture(self:IconFor(p.kind));f.name:SetText(p.name or 'Route stop');f.distance:SetText(string.format('%.0f yd',d or 0))
+  f.detail:SetText(string.format('Stop %d / %d  •  %.1f, %.1f',i,#r.points,p.x*100,p.y*100))
+ elseif r and r.finished then
+  f.name:SetText('Route complete');f.distance:SetText('');f.detail:SetText('Open Expedition to build another');f.icon:SetTexture(self:IconFor())
+ elseif r then
+  f.name:SetText('Route in another zone');f.distance:SetText('');f.detail:SetText(self:GetZoneName(r.mapID));f.icon:SetTexture(self:IconFor())
+ else
+  f.name:SetText('Ready to explore');f.distance:SetText('');f.detail:SetText('Gather to discover locations');f.icon:SetTexture(self:IconFor())
+ end
+ f.stats:SetText(string.format('%d gathers   •   %.0f /h',self:GetSessionTotal(),self:GetSessionRate()))
 end

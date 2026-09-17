@@ -1,0 +1,14 @@
+PASS startup and migration preserve history/theme
+PASS Core settings and standalone UI
+PASS incoming messages do not jump while reading
+PASS wheel returns to live
+PASS sidebar expands message area
+PASS whisper reply retains full realm name
+PASS LFG fresh unique senders and expiry
+PASS search and filtered copy
+PASS duplicate filter and bounded cache cleanup
+PASS hidden current tab unread and reset on show
+PASS 500 record history cap
+PASS scale fits small screen
+PASS settings reset updates controls
+TOTAL 13 behavior tests passed; Lua Lua 5.4. Client testing still required.

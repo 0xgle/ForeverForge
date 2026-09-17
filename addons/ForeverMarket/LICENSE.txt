@@ -1,0 +1,11 @@
+Copyright (c) 2026 0xgle. All rights reserved.
+
+ForeverMarket code, artwork and branding are reserved by 0xgle.
+This package is supplied for personal installation and testing in World of Warcraft.
+Redistribution, modification for redistribution or commercial use requires the
+copyright holder's permission.
+
+Media/Panel.tga and Media/Icons originate from the author's ForeverBags 0.9.5
+ForeverForge artwork. No Auctionator or TradeSkillMaster implementation or artwork
+is bundled. World of Warcraft and Blizzard trademarks belong to their owners.
+This fan-made addon is not affiliated with Blizzard Entertainment.

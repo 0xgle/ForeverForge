@@ -68,16 +68,31 @@ function FG:ClearRoute()
  if self.RefreshPins then self:RefreshPins() end; if self.UpdateHUD then self:UpdateHUD(true) end; if self.UIRefresh then self:UIRefresh() end; self:Print("Route cleared.")
 end
 function FG:GetNextRoutePoint()
- local r=self.db.route; local mapID,px,py=self:GetPos(); if not r or r.mapID~=mapID or not r.points or #r.points==0 then return end
+ local r=self.db.route; local mapID,px,py=self:GetPos(); if not r or r.finished or r.mapID~=mapID or not r.points or #r.points==0 then return end
  local idx=math.max(1,math.min(r.current or 1,#r.points)); local p=r.points[idx]; local d=self:Distance(mapID,px,py,p.x,p.y)
  return p,d,idx
 end
-function FG:UpdateRouteProgress()
- local r=self.db.route; if not r or not self.db.profile.autoAdvanceRoute then return end
- local p,d,idx=self:GetNextRoutePoint(); if not p or not d then return end
- if d<=(self.db.profile.routeArrivalDistance or 18) then
-  r.completed=(r.completed or 0)+1
-  if idx>=#r.points then if r.loop then r.current=1 else r.current=#r.points end else r.current=idx+1 end
-  self.routeRevision=(self.routeRevision or 0)+1
+function FG:AdvanceRoute(automatic)
+ local r=self.db.route
+ if not r or r.finished or not r.points or #r.points==0 then return end
+ r.completed=(r.completed or 0)+1
+ local idx=math.max(1,math.min(r.current or 1,#r.points))
+ if idx>=#r.points then
+  if r.loop and #r.points>1 then r.current=1 else r.finished=true end
+ else r.current=idx+1 end
+ r.arrivalLatch=automatic and true or nil
+ self.routeRevision=(self.routeRevision or 0)+1
+ if not automatic then
+  if self.RefreshPins then self:RefreshPins() end
+  if self.UIRefresh then self:UIRefresh() end
+  if self.UpdateFieldBar then self:UpdateFieldBar() end
  end
+end
+function FG:UpdateRouteProgress()
+ local r=self.db.route;if not r or r.finished or not self.db.profile.autoAdvanceRoute then return end
+ local p,d=self:GetNextRoutePoint();if not p or not d then return end
+ local threshold=self.db.profile.routeArrivalDistance or 18
+ -- Require leaving the arrival radius before counting another overlapping stop.
+ if d>threshold then r.arrivalLatch=nil end
+ if d<=threshold and not r.arrivalLatch then self:AdvanceRoute(true) end
 end
