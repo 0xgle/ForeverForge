@@ -39,9 +39,7 @@ function U:BuildSell()
     for i,h in ipairs({12,24,48}) do
         local d=i;local b=T:Button(p,h.." h",102,32,566+(i-1)*112,342,function() S.duration=d;U:RefreshSell() end);self.durationButtons[i]=b
     end
-    T:Button(p,"Check market",176,30,340,392,function()
-        if S.item then local name=S.item.name;U:SetTab("Market");U.search:SetText(name);U.exact=true;U.exactButton.label:SetText("Exact name: YES");M:Search(name,0,true) end
-    end)
+    T:Button(p,"Check + suggest",176,30,340,392,function() S:CheckMarket() end)
     T:Button(p,"Suggest price",176,30,528,392,function() S:Suggest() end)
     T:Button(p,"Save preset",176,30,716,392,function() S:SavePreset() end)
     local sum=T:Panel(p,552,96,340,438)
@@ -83,7 +81,12 @@ function U:RefreshSell()
     self.sellSlot.info:SetText(item and ("Available: "..item.total.." | Max stack: "..item.maxStack) or "Click an item in your bags on the left")
     self.sellSlot.icon:SetTexture(item and item.texture or "Interface\\Icons\\INV_Misc_Bag_10")
     local h=item and FM:GetHistoryStats(item.key)
-    self.sellStats:SetText(h and ("Median: "..FM:Money(h.median).." / item\nLast minimum: "..FM:Money(h.low).." | "..math.floor((time()-h.t)/60).." min ago") or "No local prices. Enter a price or click Check market.")
+    local live,competitors=S:Snapshot()
+    if live then
+        self.sellStats:SetText("LIVE: "..FM:Money(live).." / item | "..competitors.." competing auctions\n"..(h and ("History median: "..FM:Money(h.median).." | "..math.floor((time()-h.t)/60).." min ago") or "No local history yet."))
+    else
+        self.sellStats:SetText(h and ("History median: "..FM:Money(h.median).." / item\nLast minimum: "..FM:Money(h.low).." | "..math.floor((time()-h.t)/60).." min ago") or "No local prices. Click Check + suggest for a live comparison.")
+    end
     for i,b in ipairs(self.durationButtons) do b.active=i==(S.duration or FM.DB.settings.defaultDuration);b:Paint() end
     self:RefreshInventory();self:RefreshSellSummary()
 end
@@ -102,7 +105,8 @@ function U:BuildShopping()
     end,true)
     self.shopFilter=T:Edit(p,300,28,0,141,"");T:Tip(self.shopFilter,"Filter lists","Enter a group or item name.")
     self.shopFilter:SetScript("OnTextChanged",function() U.shopOffset=0;U:RefreshShopping() end)
-    T:Text(p,"Items starred on the Market appear in your Watchlist.",11,322,150,564,T.muted)
+    self.shopScan=T:Button(p,"Scan list",112,28,310,141,function() if FM.ShoppingScan.scan then FM.ShoppingScan:Stop() else FM.ShoppingScan:Start() end end,true)
+    T:Text(p,"Live scan checks every saved entry within server query limits.",11,438,150,448,T.muted)
     self.shopRows={}
     for i=1,8 do
         local r=T:Panel(p,892,44,0,187+(i-1)*46)
@@ -138,9 +142,15 @@ function U:RefreshShopping()
     local maxOffset=math.max(0,math.floor((#rows-1)/8)*8);self.shopOffset=math.min(self.shopOffset or 0,maxOffset)
     for i,r in ipairs(self.shopRows) do
         local d=rows[self.shopOffset+i];r.data=d;r:SetShown(d~=nil)
-        if d then r.name:SetText(d.name);r.group:SetText(d.group);r.qty:SetText("x "..d.quantity);r.cap:SetText(d.cap>0 and FM:Money(d.cap) or "No limit") end
+        if d then
+            r.name:SetText(d.name);r.qty:SetText("x "..d.quantity);r.cap:SetText(d.cap>0 and FM:Money(d.cap) or "No limit")
+            local src=FM.Data.shopping[d.key];local scan=src and src.scan
+            if scan then r.group:SetText(d.group.." | live "..(scan.lowest and FM:PlainMoney(scan.lowest) or "none").." | eligible "..scan.available.."/"..d.quantity)
+            else r.group:SetText(d.group) end
+        end
     end
     self.shopPage:SetText(#rows.." entries | page "..(math.floor(self.shopOffset/8)+1).." | quantities are a shopping plan, not automatic orders")
+    if self.shopScan then self.shopScan.label:SetText(FM.ShoppingScan.scan and "Stop scan" or "Scan list") end
 end
 function U:BuildHistory()
     local p=self:NewPanel("History","Price history / market memory","Asking prices from your observations. These are not confirmed sale prices.")
@@ -233,7 +243,11 @@ function U:Refresh()
     self.sideStats:SetText("Items: "..count.."\nQueries: "..(FM.Data.stats.scans or 0).."\nLast scan: "..(FM.Data.stats.lastFull and date("%d.%m %H:%M",FM.Data.stats.lastFull) or "no full scan"))
     if self.activeTab=="Market" or self.activeTab=="Deals" or self.activeTab=="Owned" then self:RefreshMarket()
     elseif self.activeTab=="Sell" then self:RefreshSell()
+    elseif self.activeTab=="Bids" then self:RefreshBids()
     elseif self.activeTab=="Shopping" then self:RefreshShopping()
+    elseif self.activeTab=="Trader" then self:RefreshTrader()
+    elseif self.activeTab=="Advisor" then self:RefreshAdvisor()
+    elseif self.activeTab=="Ledger" then self:RefreshLedger()
     elseif self.activeTab=="History" then self:RefreshHistory()
     elseif self.activeTab=="Settings" then self:RefreshSettings() end
     if not FM:Supported() then self:SetStatus("Legacy auction API unavailable. Use the Blizzard interface to trade on this client.")
@@ -246,8 +260,11 @@ FM:On("PLAYER_LOGIN",function()
         GameTooltip:HookScript("OnTooltipSetItem",function(tip)
             if not FM.DB.settings.tooltip then return end
             local name,link=tip:GetItem();if not link then return end
-            local h=FM:GetHistoryStats(FM:ItemKey(link,name))
-            if h then tip:AddLine("ForeverMarket | median/item: "..FM:Money(h.median),.6,.84,.78);tip:AddLine("Data age: "..math.floor((time()-h.t)/60).." min | "..h.count.." samples",.6,.66,.67) end
+            local key=FM:ItemKey(link,name);local h=FM:GetHistoryStats(key);local src=FM.Price:Sources(key,link)
+            if h then tip:AddLine("ForeverMarket | market: "..FM:Money(h.median).." / item",.6,.84,.78);tip:AddLine("Recent low: "..FM:Money(src.FMMinBuyout or h.low).." | "..h.count.." samples | "..math.floor((time()-h.t)/60).." min",.6,.66,.67) end
+            local buy,sell=FM.Ledger:Averages(key);local owned=FM.Ledger:OwnedEverywhere(key);local _,g=FM.Groups:GroupFor(key)
+            if buy or sell then tip:AddLine("Avg buy: "..(buy and FM:Money(buy) or "-").." | Avg sell: "..(sell and FM:Money(sell) or "-"),.72,.72,.72) end
+            if owned>0 or (g and not g.system) then tip:AddLine("Owned: "..owned.." | Group: "..(g and g.name or "Ungrouped"),.72,.72,.72) end
         end)
     end
 end)

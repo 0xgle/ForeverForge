@@ -40,6 +40,7 @@ function I:Scan()
     self.items={};self.byKey=groups;self.skipped=skipped;self.uncached=uncached
     for _,r in pairs(groups) do self.items[#self.items+1]=r end
     table.sort(self.items,function(a,b) if a.name==b.name then return a.inventoryKey<b.inventoryKey end;return a.name<b.name end)
+    if FM.Ledger then FM.Ledger:CaptureBags() end
     if FM.UI and FM.UI.bagRows then FM.UI:RefreshInventory() end
 end
 function I:Schedule()

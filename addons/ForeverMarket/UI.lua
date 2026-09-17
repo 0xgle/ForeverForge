@@ -1,7 +1,7 @@
 local _,FM=...
 local T,M=FM.T,FM.Market
 local U={offset=0,sort="unit",ascending=true,activeTab="Market"};FM.UI=U
-local tabs={{"Market","Market","search"},{"Deals","Deals","coins"},{"Sell","Sell","sell"},{"Owned","My auctions","bank"},{"Shopping","Shopping lists","favorite"},{"History","Price history","discovery"},{"Settings","Settings","settings"}}
+local tabs={{"Market","Market","search"},{"Deals","Deals","coins"},{"Sell","Sell","sell"},{"Owned","My auctions","bank"},{"Bids","My bids","coins"},{"Shopping","Shopping","favorite"},{"Trader","Trader Engine","trade"},{"Advisor","Advisor","discovery"},{"Ledger","Ledger","bank"},{"History","History","discovery"},{"Settings","Settings","settings"}}
 function U:ApplyPosition()
     if not self.frame then return end
     local scale=math.min(FM.DB.settings.scale or 1,(UIParent:GetWidth()-24)/1160,(UIParent:GetHeight()-24)/760)
@@ -25,9 +25,9 @@ function U:Build()
     self.connection=T:Text(f,"",10,845,60,242,T.teal);self.connection:SetJustifyH("RIGHT")
     self.nav={}
     for i,v in ipairs(tabs) do
-        local name=v[1];local b=T:Button(f,v[2],178,42,24,116+(i-1)*49,function() U:SetTab(name) end)
-        b.label:ClearAllPoints();b.label:SetPoint("LEFT",42,0);b.label:SetWidth(127);b.label:SetJustifyH("LEFT")
-        T:Icon(b,v[3],26,9,8);self.nav[name]=b
+        local name=v[1];local b=T:Button(f,v[2],178,29,24,100+(i-1)*33,function() U:SetTab(name) end)
+        b.label:ClearAllPoints();b.label:SetPoint("LEFT",38,0);b.label:SetWidth(131);b.label:SetJustifyH("LEFT")
+        T:Icon(b,v[3],20,9,4);self.nav[name]=b
     end
     local note=T:Panel(f,178,142,24,480)
     T:Text(note,"LOCAL MARKET",10,13,14,155,T.gold)
@@ -38,7 +38,7 @@ function U:Build()
     T:Text(f,"by 0xgle  /  "..FM.version,10,26,724,250,T.muted)
     self.status=T:Text(f,"Ready",11,260,726,870,T.muted)
     self.body=CreateFrame("Frame",nil,f);self.body:SetSize(916,604);self.body:SetPoint("TOPLEFT",220,-110)
-    self.panels={};self:BuildMarket();self:BuildSell();self:BuildShopping();self:BuildHistory();self:BuildSettings();self:BuildConfirm()
+    self.panels={};self:BuildMarket();self:BuildBids();self:BuildSell();self:BuildShopping();self:BuildTrader();self:BuildAdvisor();self:BuildLedger();self:BuildHistory();self:BuildSettings();self:BuildConfirm()
     f:SetScript("OnHide",function()
         U:DismissConfirm()
         if not U.suppressClose and M.open and FM.Native.saved then
@@ -61,6 +61,7 @@ function U:SetTab(name)
     for k,b in pairs(self.nav) do b.active=k==name;b:Paint() end
     for k,p in pairs(self.panels) do p:SetShown(k==name or (k=="Market" and (name=="Deals" or name=="Owned"))) end
     if name=="Owned" and M.open then M:RefreshOwned() end
+    if name=="Bids" and M.open then M:RefreshBids() end
     if name=="Sell" then FM.Inventory:Scan();if M.open then FM.Sell:ReadSlot() end end
     self:Refresh()
 end
@@ -83,13 +84,17 @@ function U:BuildMarket()
     self.filter:SetScript("OnTextChanged",function() U.offset=0;U:RefreshMarket() end)
     T:Text(p,"Max / item",11,276,88,82,T.muted)
     self.maxPrice=T:Edit(p,126,28,356,80,"");self.maxPrice:SetScript("OnTextChanged",function() U.offset=0;U:RefreshMarket() end)
-    self.onlyBuy=T:Button(p,"Buyout only: NO",154,28,490,80,function(b) U.buyoutOnly=not U.buyoutOnly;b.label:SetText("Buyout only: "..(U.buyoutOnly and "YES" or "NO"));U.offset=0;U:RefreshMarket() end)
+    self.onlyBuy=T:Button(p,"Buyout only: NO",154,28,490,80,function(b)
+        if U.activeTab=="Owned" then U.ownerUndercutOnly=not U.ownerUndercutOnly else U.buyoutOnly=not U.buyoutOnly end
+        U.offset=0;U:RefreshMarket()
+    end)
     self.filterHint=T:Text(p,"Shift-click: watch item",10,660,88,230,T.muted)
     local head=T:Panel(p,892,24,0,120)
     local cols={{"ITEM","name",8,264},{"QTY","count",280,44},{"UNIT PRICE","unit",330,112},{"STACK PRICE","buyout",450,112},{"MARKET %","deal",570,92},{"SELLER","owner",670,124}}
+    self.marketHeaders={}
     for _,v in ipairs(cols) do
         local key=v[2];local b=T:Button(head,v[1],v[4],22,v[3],1,function() if U.sort==key then U.ascending=not U.ascending else U.sort=key;U.ascending=true end;U:RefreshMarket() end)
-        b.label:SetFont(STANDARD_TEXT_FONT,9,"")
+        b.label:SetFont(STANDARD_TEXT_FONT,9,"");self.marketHeaders[key]=b
     end
     self.rows={}
     for i=1,10 do
@@ -127,8 +132,11 @@ function U:BuildMarket()
     self.next=T:Button(p,"AH page >",122,28,770,518,function() if U.activeTab~="Owned" then M:Search(M.query,M.page+1,M.exact) end end)
     local detail=T:Panel(p,892,48,0,555)
     self.detail=T:Text(detail,"Select an item to see its details.",11,12,10,598,T.muted);self.detail:SetHeight(32);self.detail:SetWordWrap(true)
-    T:Button(detail,"Watch",112,28,642,10,function() if U.selected then FM:ToggleWatch(U.selected);U:RefreshMarket() end end)
-    T:Button(detail,"Search",112,28,766,10,function() if U.selected then U.search:SetText(U.selected.name);M:Search(U.selected.name,0,true) end end)
+    self.detailWatch=T:Button(detail,"Watch",112,28,642,10,function() if U.selected then FM:ToggleWatch(U.selected);U:RefreshMarket() end end)
+    self.detailSearch=T:Button(detail,"Search",112,28,766,10,function()
+        if not U.selected then return end
+        if U.activeTab=="Owned" then M:CheckOwned(U.selected) else U.search:SetText(U.selected.name);M:Search(U.selected.name,0,true) end
+    end)
 end
 function U:MarketData()
     local data={};local owned=self.activeTab=="Owned"
@@ -136,14 +144,17 @@ function U:MarketData()
     local limit=self.maxPrice and FM:ParseMoney(self.maxPrice:GetText())
     for _,r in ipairs(owned and M.owned or M.results) do
         local valid=(filter=="" or r.name:lower():find(filter,1,true)) and (not limit or limit<=0 or (r.unit>0 and r.unit<=limit))
-        if self.buyoutOnly and r.buyout<=0 then valid=false end
+        if (not owned and self.buyoutOnly) and r.buyout<=0 then valid=false end
+        if owned and self.ownerUndercutOnly and M:OwnerStatus(r)~="UNDERCUT" then valid=false end
         if self.activeTab=="Deals" and (not r.deal or r.deal>FM.DB.settings.dealThreshold or M:IsMine(r.owner)) then valid=false end
         if valid then data[#data+1]=r end
     end
     local key,asc=self.sort,self.ascending
     table.sort(data,function(a,b)
         local av,bv=a[key],b[key]
-        if key=="unit" or key=="deal" then av=av and av>0 and av or math.huge;bv=bv and bv>0 and bv or math.huge end
+        if owned and key=="deal" then av,bv=M:OwnerStatus(a),M:OwnerStatus(b)
+        elseif owned and key=="owner" then av,bv=a.timeLeft or 99,b.timeLeft or 99
+        elseif key=="unit" or key=="deal" then av=av and av>0 and av or math.huge;bv=bv and bv>0 and bv or math.huge end
         if av==bv then return a.index<b.index end
         if type(av)=="string" then av=av:lower();bv=bv:lower() end
         if asc then return av<bv else return av>bv end
@@ -156,12 +167,20 @@ function U:RefreshMarket()
     self.offset=math.min(self.offset,max)
     self.scroll:SetMinMaxValues(0,max)
     if self.scroll:GetValue()~=self.offset then self.scroll:SetValue(self.offset) end
-    self.marketTitle:SetText(owned and "My auctions" or self.activeTab=="Deals" and "Deals / local price comparison" or "Market / find an item")
+    self.marketTitle:SetText(owned and "My auctions / price checks" or self.activeTab=="Deals" and "Deals / local price comparison" or "Market / find an item")
+    if self.marketHeaders then
+        self.marketHeaders.deal.label:SetText(owned and "STATUS" or "MARKET %")
+        self.marketHeaders.owner.label:SetText(owned and "TIME / BID" or "SELLER")
+    end
+    if self.onlyBuy then self.onlyBuy.label:SetText(owned and ("Undercut only: "..(self.ownerUndercutOnly and "YES" or "NO")) or ("Buyout only: "..(self.buyoutOnly and "YES" or "NO"))) end
+    if self.filterHint then self.filterHint:SetText(owned and "Select auction -> Check price" or "Shift-click: watch item") end
+    if self.detailSearch then self.detailSearch.label:SetText(owned and "Check price" or "Search") end
+    if self.detailWatch then self.detailWatch:SetShown(not owned) end
     self.empty:SetShown(#data==0)
     if not M.open then
         self.empty:SetText("Open the Auction House to search and trade.\nShopping lists and price history are also available on the go.")
     elseif owned then
-        self.empty:SetText(M.ownerLoading and "Loading your auctions..." or "No active auctions found.\nClick Refresh after posting if the server has not updated the list yet.")
+        self.empty:SetText(M.ownerLoading and "Loading your auctions..." or (self.ownerUndercutOnly and "No checked auctions are currently marked UNDERCUT.\nSelect an auction, click Check price, then enable this filter." or "No auctions found.\nClick Refresh after posting if the server has not updated the list yet."))
     else
         self.empty:SetText(M.request and "Loading auctions..." or "No results. Enter a name and click Search.\nFilters and Deals apply only to loaded auctions.")
     end
@@ -171,21 +190,31 @@ function U:RefreshMarket()
             r.icon:SetTexture(d.texture or "Interface\\Icons\\INV_Misc_QuestionMark")
             r.name:SetText((FM.Data.watchlist[d.key] and "|cffd4ad6b* |r" or "")..d.name)
             local color=ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[d.quality];if color then r.name:SetTextColor(color.r,color.g,color.b) end
-            r.qty:SetText(d.count);r.unit:SetText(d.unit>0 and FM:Money(d.unit) or "-");r.total:SetText(d.buyout>0 and FM:Money(d.buyout) or "No buyout")
-            r.deal:SetText(owned and (d.saleStatus==1 and "Sold" or ({"<30m","<2h","<12h",">12h"})[d.timeLeft] or "-") or d.deal and string.format("%.0f%%",d.deal*100) or "-")
-            r.owner:SetText(owned and (d.bid>0 and ("Bid "..FM:Money(d.bid)) or "No bids") or d.owner)
-            r.bid:SetShown(not owned);r.buy.label:SetText(owned and "Cancel" or "Buy");r.buy:SetWidth(owned and 88 or 44)
+            r.qty:SetText(owned and d.saleStatus==1 and "-" or d.count);r.unit:SetText(d.unit>0 and FM:Money(d.unit) or "-");r.total:SetText(d.buyout>0 and FM:Money(d.buyout) or "No buyout")
+            if owned then
+                local status=M:OwnerStatus(d);r.deal:SetText(status)
+                local timeText=({"<30m","<2h","<12h",">12h"})[d.timeLeft] or "-"
+                r.owner:SetText(d.saleStatus==1 and "SOLD" or (timeText..(d.bid>0 and (" | "..FM:Money(d.bid)) or " | no bid")))
+            else
+                r.deal:SetText(d.deal and string.format("%.0f%%",d.deal*100) or "-");r.owner:SetText(d.owner)
+            end
+            r.bid:SetShown(not owned);r.buy.label:SetText(owned and (d.saleStatus==1 and "Sold" or "Cancel") or "Buy");r.buy:SetWidth(owned and 88 or 44)
             local enabled=M.open and not M.request and not M.queued and not M.transaction and (owned or (d.actionable and d.generation==M.generation and not M:IsMine(d.owner)))
-            r.buy:SetEnabled(enabled and (owned or d.buyout>0));r.bid:SetEnabled(enabled)
+            r.buy:SetEnabled(enabled and (owned and d.saleStatus~=1 or (not owned and d.buyout>0)));r.bid:SetEnabled(enabled)
         end
     end
     local page=owned and 0 or M.page;local total=owned and (M.ownerTotal or #data) or M.total
     if owned then
-        self.paging:SetText(string.format("%d active auctions | showing %d-%d",total,#data>0 and self.offset+1 or 0,math.min(#data,self.offset+10)))
+        local sold,under=0,0;for _,d in ipairs(M.owned) do if d.saleStatus==1 then sold=sold+1 end;if M:OwnerStatus(d)=="UNDERCUT" then under=under+1 end end
+        self.paging:SetText(string.format("%d auctions | %d sold | %d undercut | showing %d-%d",total,sold,under,#data>0 and self.offset+1 or 0,math.min(#data,self.offset+10)))
     else
         self.paging:SetText(string.format("%d results | showing %d-%d | AH page %d",#data,#data>0 and self.offset+1 or 0,math.min(#data,self.offset+10),page+1))
     end
     local can=M.open and not M.request and not M.queued and not M.transaction and not owned and M.mode=="search"
     self.prev:SetEnabled(can and page>0);self.next:SetEnabled(can and (page+1)*50<total)
-    if self.selected then local d=self.selected;self.detail:SetText(d.name.." | Stack: "..FM:Money(d.buyout).."\n"..(d.reference and ("Reference: "..FM:Money(d.reference).." / "..d.referenceSource) or "No reliable reference price available.")) end
+    if self.selected then
+        local d=self.selected
+        if owned then self.detail:SetText(d.name.." | "..M:OwnerStatus(d).."\n"..M:OwnerCheckText(d))
+        else self.detail:SetText(d.name.." | Stack: "..FM:Money(d.buyout).."\n"..(d.reference and ("Reference: "..FM:Money(d.reference).." / "..d.referenceSource) or "No reliable reference price available.")) end
+    else self.detail:SetText(owned and "Select an auction, then click Check price to compare it with the current loaded market page." or "Select an item to see its details.") end
 end

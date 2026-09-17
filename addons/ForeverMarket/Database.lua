@@ -7,15 +7,18 @@ function FM:InitDB()
     for k,v in pairs(defaults) do if db.settings[k]==nil then db.settings[k]=v end end
     db.realms=type(db.realms)=="table" and db.realms or {}
     self.realmKey=(GetRealmName() or "unknown").." / "..(UnitFactionGroup("player") or "neutral")
-    db.realms[self.realmKey]=db.realms[self.realmKey] or {history={},catalog={},watchlist={},shopping={},presets={},log={},stats={}}
+    db.realms[self.realmKey]=db.realms[self.realmKey] or {history={},catalog={},watchlist={},shopping={},presets={},log={},stats={},groups={},operations={},itemGroups={},ledger={entries={},seenSales={}},snapshots={},crafting={}}
     local data=db.realms[self.realmKey]
-    for _,k in ipairs({"history","catalog","watchlist","shopping","presets","log","stats"}) do data[k]=data[k] or {} end
+    for _,k in ipairs({"history","catalog","watchlist","shopping","presets","log","stats","groups","operations","itemGroups","snapshots","crafting"}) do data[k]=data[k] or {} end
+    data.ledger=type(data.ledger)=="table" and data.ledger or {entries={},seenSales={}}
+    data.ledger.entries=data.ledger.entries or {};data.ledger.seenSales=data.ledger.seenSales or {}
     if not db.schema or db.schema<2 then
         db.legacy={history=db.history,stats=db.stats,watchlist=db.watchlist}
         for k,v in pairs(db.watchlist or {}) do data.watchlist[k]=v end
         -- Legacy prices have no realm/faction provenance; archive rather than mixing markets.
         db.schema=2
     end
+    if not db.schema or db.schema<3 then db.schema=3 end
     self.DB,self.Data=db,data
     self:PruneHistory()
 end

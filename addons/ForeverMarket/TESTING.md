@@ -14,7 +14,9 @@
 7. Open Sell. Inventory should appear automatically. Select a cheap item and set
    5 items per stack, 2 stacks, and 1s per item: stack price should be 5s and total 10s.
    Check the deposit, minimum price and saved preset.
-8. Post a cheap auction, find it in My auctions, cancel it and check your mailbox.
+8. Post a cheap auction, find it in My auctions, select it and use Check price. Verify UNDERCUT/LOWEST-style status, then cancel it and check your mailbox.
+9. On Sell, select an item and use Check + suggest. Verify the tab stays on Sell and the suggested unit price updates.
+10. If a sold owner row is still present in the Classic owner cache, verify it appears as SOLD and its Cancel action is disabled.
    When posting multiple stacks, verify the actual number of auctions created.
 9. Request a full scan. Buying from its results must be disabled until you search
    the item again. Subsequent scans must respect the server cooldown.

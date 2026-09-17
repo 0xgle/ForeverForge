@@ -1,6 +1,6 @@
 local ADDON, F = ...
 _G.ForeverCore = F
-F.name, F.version, F.apiVersion = ADDON, "1.0.0-rc1", 1
+F.name, F.version, F.apiVersion = ADDON, "1.0.1-rc2", 1
 F.modules, F.pending, F.errors = {}, {}, {}
 F.media = "Interface\\AddOns\\ForeverCore\\Media\\"
 F.A = {}
@@ -30,6 +30,7 @@ function F:InitDB()
     s.scale = math.max(.65, math.min(1.25, tonumber(s.scale) or 1))
     s.minimapAngle = tonumber(s.minimapAngle) or 220
     if s.minimap == nil then s.minimap = true end
+    if s.hideOtherMinimapButtons == nil then s.hideOtherMinimapButtons = true end
     ForeverCoreCharDB = type(ForeverCoreCharDB) == "table" and ForeverCoreCharDB or {}
     self.char = ForeverCoreCharDB
 end

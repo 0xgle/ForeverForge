@@ -1,3 +1,11 @@
+# ForeverCore 1.0.1 RC2
+
+- Minimap cleanup is enabled by default: ForeverCore keeps its own launcher and hides detected third-party addon minimap buttons.
+- Added Appearance toggle for third-party minimap icons.
+- Added `/fc icons` quick toggle.
+- Re-scans shortly after login to catch late-created LibDataBroker/LibDBIcon launchers.
+- Blizzard minimap controls are excluded from cleanup.
+
 # Changelog
 
 ## 1.0.0-rc1

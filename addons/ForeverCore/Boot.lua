@@ -1,4 +1,57 @@
 local ADDON,F=...
+local MINIMAP_SAFE = {
+    ForeverCoreMinimapButton=true, MinimapZoomIn=true, MinimapZoomOut=true,
+    MiniMapTracking=true, MiniMapTrackingButton=true, MiniMapWorldMapButton=true,
+    GameTimeFrame=true, TimeManagerClockButton=true, MinimapBackdrop=true,
+    MinimapNorthTag=true, MiniMapMailFrame=true, QueueStatusMinimapButton=true,
+    GarrisonLandingPageMinimapButton=true, ExpansionLandingPageMinimapButton=true,
+}
+function F:IsAddonMinimapButton(frame)
+    if not frame or frame==self.minimap or not frame.GetObjectType or frame:GetObjectType()~="Button" then return false end
+    local name=frame:GetName()
+    if name and MINIMAP_SAFE[name] then return false end
+    if name and (name:find("LibDBIcon",1,true) or name:find("LDBIcon",1,true)) then return true end
+    if frame.minimapDataObject or frame.dataObject or frame.db then return true end
+    if name then
+        local low=name:lower()
+        if low:find("minimapbutton",1,true) and not low:find("tracking",1,true) and not low:find("zoom",1,true) then return true end
+        for i=1,(self.A.GetNumAddOns and self.A.GetNumAddOns() or 0) do
+            local addon=self.A.GetAddOnInfo(i)
+            if addon and addon~=ADDON then
+                local key=addon:gsub("[^%w]",""):lower()
+                if #key>=4 and low:gsub("[^%w]",""):find(key,1,true) then return true end
+            end
+        end
+    end
+    return false
+end
+function F:ApplyMinimapButtonPolicy()
+    if not Minimap or not self.db then return end
+    local hide=self.db.settings.hideOtherMinimapButtons
+    self.hiddenMinimapButtons=self.hiddenMinimapButtons or {}
+    local children={Minimap:GetChildren()}
+    for _,frame in ipairs(children) do
+        if self:IsAddonMinimapButton(frame) then
+            if hide then
+                if not self.hiddenMinimapButtons[frame] then
+                    self.hiddenMinimapButtons[frame]=true
+                    if frame.HookScript then frame:HookScript("OnShow",function(btn)
+                        if F.db and F.db.settings.hideOtherMinimapButtons and btn~=F.minimap then btn:Hide() end
+                    end) end
+                end
+                frame:Hide()
+            elseif self.hiddenMinimapButtons[frame] then
+                frame:Show()
+            end
+        end
+    end
+end
+function F:SetOtherMinimapButtonsHidden(hidden)
+    self.db.settings.hideOtherMinimapButtons=not not hidden
+    self:ApplyMinimapButtonPolicy()
+    self:Refresh()
+end
+
 function F:UpdateMinimap()
     if not self.minimap then return end
     local angle=math.rad(self.db.settings.minimapAngle)
@@ -39,8 +92,9 @@ SlashCmdList.FOREVERCORE=function(msg)
     if msg=="reset" then
         if F.db then F.db.settings.position=nil; F.db.settings.scale=1 end
         F:BuildUI(); F.frame:ClearAllPoints(); F.frame:SetPoint("CENTER"); F:ApplyScale(); F.frame:Show()
-    elseif msg=="help" then F:Print("/fc | /fc addons | /fc profiles | /fc diag | /fc reset | /fc minimap")
+    elseif msg=="help" then F:Print("/fc | /fc addons | /fc profiles | /fc diag | /fc reset | /fc minimap | /fc icons")
     elseif msg=="minimap" then F.db.settings.minimap=not F.db.settings.minimap; F:UpdateMinimap()
+    elseif msg=="icons" then F:SetOtherMinimapButtonsHidden(not F.db.settings.hideOtherMinimapButtons)
     elseif msg=="addons" or msg=="profiles" or msg=="diag" then
         F:BuildUI(); F.page=({addons="Addons",profiles="Profiles",diag="Diagnostics"})[msg]; F.frame:Show(); F:Render()
     else F:Toggle() end
@@ -53,7 +107,8 @@ for _,event in ipairs({"ADDON_LOADED","PLAYER_LOGIN","PLAYER_REGEN_DISABLED","PL
 e:SetScript("OnEvent",function(_,event,arg)
     if event=="ADDON_LOADED" and arg==ADDON then F:InitDB(); F.char.reload=nil
     elseif event=="PLAYER_LOGIN" then
-        F:Scan(); F:CreateLauncher(); F:RegisterBroker()
+        F:Scan(); F:CreateLauncher(); F:RegisterBroker(); F:ApplyMinimapButtonPolicy()
+        if C_Timer and C_Timer.After then C_Timer.After(1,function() F:ApplyMinimapButtonPolicy() end); C_Timer.After(3,function() F:ApplyMinimapButtonPolicy() end) end
         if not F.db.welcomed then F:Print("Welcome to the Sanctum. Open with /fc or the minimap crystal. By 0xgle."); F.db.welcomed=true end
     elseif event=="DISPLAY_SIZE_CHANGED" or event=="UI_SCALE_CHANGED" then F:ApplyScale()
     elseif F.db then F:Refresh() end

@@ -1,3 +1,29 @@
+# 2.0.0-beta1
+
+- Added **Trader Engine** with item Groups and per-group Auctioning Operations.
+- Added custom local price expressions with `FMMarket`, `FMRecent`, `FMHistorical`, `FMMinBuyout`, `FMAvgBuy`, `FMAvgSell`, `FMVendorSell` and `FMCrafting`.
+- Added `min()`, `max()` and `avg()` functions for price rules such as `max(80% FMMarket, 120% FMAvgBuy)`.
+- Added live **Post Scan** and **Cancel Scan** plans; post results can be pushed into the Sell form for final review.
+- Added **My Bids** using the Classic Era bidder list, including WINNING / OUTBID states.
+- Added batch **Shopping Scan** with stored availability and best eligible price per shopping entry.
+- Added **Forever Advisor** market signals from local price history and remembered inventory.
+- Added **Ledger** for purchases, post/cancel actions, observed sold auctions, 1-day / 7-day / all-time summaries and average buy/sell sources.
+- Added cross-character inventory snapshots for bags, bank and mailbox when those locations are visited.
+- Added **Crafting Profit** memory for opened professions, reagent cost estimation, market value, craftable quantity and shopping-list generation.
+- Preserved the Classic Era zero-argument owner/bidder query fixes and the `SOLD + count=0` owner-auction handling from 1.2.
+- Extended the simulated Classic Era regression suite to **92 assertions**.
+
+# 1.2.0-beta1
+
+- **My Auctions 2.0:** select an auction and use **Check price** to compare it with current competing buyouts.
+- Added owner-auction states: `UNDERCUT`, `MATCHED`, `LOWEST`, `ONLY YOU`, `BID ONLY`, `SOLD`, and `NOT CHECKED`.
+- Added **Undercut only** filtering for checked owned auctions plus sold/undercut summary counts.
+- Fixed Classic Era sold owner rows (`count = 0`, `saleStatus = 1`) being silently discarded.
+- Sold auctions are shown in My Auctions and cannot be cancelled.
+- **Sell:** **Check + suggest** now performs an exact market lookup without leaving the Sell tab and applies the suggested unit price.
+- Sell panel now shows a fresh live lowest competitor and competing-auction count when available.
+- Preserved all existing safety checks, confirmations, local price memory and Classic Era owner-list fixes.
+
 # 1.1.2-beta1
 
 - Fixed **My auctions** on Classic Era by calling `GetOwnerAuctionItems()` with the correct zero-argument signature.

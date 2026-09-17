@@ -1,11 +1,11 @@
 # ForeverMarket
 
-**1.1.2-beta1 · by 0xgle · Classic Era 1.15.9 / Interface 11509**
+**2.0.0-beta1 · by 0xgle · Classic Era 1.15.9 / Interface 11509**
 
-An English-language Auction House addon for the ForeverForge suite, with market
-search, inventory-first selling, shopping lists and local price history.
+An English-language Auction House and trading addon for the ForeverForge suite, with market
+search, inventory-first selling, shopping lists, local price history and a new **Trader Engine**.
 Its workflow is inspired by Auctionator and TradeSkillMaster, with an original
-implementation. Neither addon is required. This is not full TSM feature parity.
+implementation. Neither addon is required. The goal is TSM-style power with a simpler workflow.
 
 ## Installation
 
@@ -34,7 +34,7 @@ automatically, or a price is suggested from available local observations.
 
 Check the unit price, stack size, stack count and duration, then click **Post auction**
 and confirm. Selecting an item never posts it. If no price data is available, enter
-a price or use **Check market**; the addon does not invent a valuation.
+a price or use **Check + suggest**; the addon does not invent a valuation.
 
 The list refreshes when bags change. Identical item links are grouped with their
 combined quantity, while different variants remain separate. Search and paging
@@ -62,7 +62,7 @@ equipped gear are not scanned.
 - **Price suggestions:** lowest other-seller price in recent results, or the latest
   historical minimum; the status message identifies the source and its age.
 - **Item presets:** unit price, minimum price, stack size and duration.
-- **My auctions:** refresh, paging and cancellation with confirmation.
+- **My auctions:** refresh, SOLD visibility, per-auction price checks, undercut status/filtering and cancellation with confirmation.
 - **Watchlist:** Shift-click a market row. Watched items remain available between searches.
 - **Shopping lists:** named groups, desired quantities and unit price limits,
   editing/removal, and manually initiated searches.
@@ -74,6 +74,15 @@ equipped gear are not scanned.
   errors and missing confirmation. This is not a ledger of actual mailbox receipts.
 - **Settings:** undercut amount, deal threshold, fee, scale and automatic opening.
 - **ForeverCore:** optional launcher and settings integration through API v1.
+- **Trader Engine:** Groups, Auctioning Operations, Min/Normal/Max price rules, undercut, stack, post-cap and keep-in-bags settings.
+- **Price Engine:** local price expressions using `FMMarket`, `FMRecent`, `FMHistorical`, `FMMinBuyout`, `FMAvgBuy`, `FMAvgSell`, `FMVendorSell` and `FMCrafting`.
+- **Post / Cancel plans:** scan grouped bag items or current owned auctions and build a reviewable action plan before any transaction.
+- **My bids:** bidder-list tracking with WINNING / OUTBID states and normal confirmations before trading.
+- **Shopping Scan:** walks your shopping entries one at a time under the normal AH query throttle and stores current availability.
+- **Advisor:** descriptive opportunity signals from your own local observations; it does not promise profit or predict future prices.
+- **Ledger:** remembers purchases, posting/cancellation actions and SOLD rows observed in My Auctions, with daily / weekly / all-time summaries.
+- **Inventory memory:** bag, bank and mailbox snapshots are remembered per character when those locations are visited.
+- **Crafting Profit:** captures an opened profession, estimates reagent cost / market value / craftable quantity and can add missing reagents to Shopping.
 
 ## Appearance and language
 
@@ -118,15 +127,16 @@ Neutral markets are not detected automatically; history is separated by realm
 and faction, not by auctioneer. Avoid mixing neutral and faction scans if you
 need separate valuations.
 
-Shopping quantities are a plan, not an automatic order. This build does not
-include crafting, TSM operations, desktop-app data, automated mail collection,
-automatic reposting or realized-profit accounting. Every transaction requires
-a click and confirmation. The server may still reject an auction that disappears
-between confirmation and processing.
+Shopping quantities and Trader plans are recommendations, not unattended automation.
+ForeverMarket 2.0 includes Groups, Auctioning Operations, local price expressions,
+crafting estimates, inventory snapshots and a lightweight ledger, but it does not
+perform background trading, automated mail collection, automatic reposting or desktop-app synchronization.
+Every transaction still requires a user click and confirmation. The server may still reject
+an auction that disappears between confirmation and processing.
 
 ## Verification
 
-The existing 63-assertion simulated-API suite passes with the English interface.
+The current 92-assertion simulated Classic Era API suite passes with the English interface.
 It covers loading, every panel, switching interfaces, stale offers, query limits,
 unit/stack pricing, confirmations, data migration and inventory-first selling.
 Frame-model renders were reviewed for layout. These checks are not live WoW tests.

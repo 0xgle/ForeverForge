@@ -36,6 +36,38 @@ function S:AcceptCursor()
         FM.UI:RefreshSell();FM:Status("Item ready. The price field is per item, not per stack.")
     end
 end
+function S:Snapshot()
+    if not self.item then return nil,0 end
+    local best,count=nil,0
+    for _,r in ipairs(FM.Market.results or {}) do
+        if r.key==self.item.key and r.unit>0 and not FM.Market:IsMine(r.owner) and time()-r.seen<300 then
+            count=count+1;best=math.min(best or r.unit,r.unit)
+        end
+    end
+    return best,count
+end
+function S:CheckMarket()
+    if not self.item then FM:Status("Select an item from your bags first.");return end
+    if FM.Market.request or FM.Market.queued then FM:Status("Wait for the current market query to finish.");return end
+    if not FM.Market:Ready() then return end
+    self.pendingCheck={key=self.item.key,name=self.item.name}
+    FM:Status("Checking the market for "..self.item.name.."...")
+    FM.Market:Search(self.item.name,0,true)
+end
+function S:OnMarketResults()
+    local pending=self.pendingCheck;if not pending then return end
+    self.pendingCheck=nil
+    if not self.item or self.item.key~=pending.key then FM:Status("Market check finished, but the selected sell item changed.");return end
+    local best,count=self:Snapshot()
+    if best then
+        self:Suggest(true)
+        FM:Status("Market checked: "..count.." competing auctions, lowest "..FM:Money(best).." / item. Suggested price applied.")
+    else
+        self:Suggest(true)
+        FM:Status("Market checked: no competing buyout found on the loaded page. History is used when available.")
+    end
+    FM:Refresh()
+end
 function S:Suggest(silent)
     if not self.item then return end
     local best,source
@@ -46,7 +78,7 @@ function S:Suggest(silent)
         local h=FM:GetHistoryStats(self.item.key)
         if h then best=h.low;source="history ("..math.floor((time()-h.t)/60).." min ago)" end
     end
-    if not best then if not silent then FM:Status("No price data. Click Check market and run a search.") end;return end
+    if not best then if not silent then FM:Status("No price data. Click Check + suggest to run a live comparison.") end;return end
     local floor=FM:ParseMoney(FM.UI.sellFloor:GetText()) or 0
     local unit=math.max(1,floor,math.floor(best-FM.DB.settings.undercut))
     FM.UI.sellPrice:SetText(FM:PlainMoney(unit));FM:Status("Suggested from "..source.."; your minimum price has been applied.")
@@ -81,7 +113,7 @@ function S:Post()
         if not now or S.item~=item or now.stack~=v.stack or now.count~=v.count or now.unit~=v.unit or now.duration~=v.duration then FM:Status("The form has changed. Please confirm again.");return end
         local name,_,_,_,_,_,_,_,total,id=GetAuctionSellItemInfo()
         if name~=item.name or (id and item.itemID and id~=item.itemID) or (total and total<v.stack*v.count) or GetMoney()<now.deposit then FM:Status("The item or deposit has changed.");return end
-        local row={name=item.name,link=item.link,count=v.stack*v.count}
+        local row={name=item.name,link=item.link,key=item.key,count=v.stack*v.count}
         FM.Market:BeginTransaction("Posting",row,v.buyout*v.count)
         local ok,errorText
         if PostAuction and AuctionsCreateAuctionButton and AuctionsCreateAuctionButton.StartPost then

@@ -1,8 +1,8 @@
 ## Interface: 11509
 ## Title: |cffd4ad6bForeverMarket|r
-## Notes: ForeverForge Auction House: market, selling, shopping lists and local price memory.
+## Notes: ForeverForge Trader Engine: market, groups, operations, scans, ledger and local price intelligence.
 ## Author: 0xgle
-## Version: 1.1.2-beta1
+## Version: 2.0.0-beta1
 ## SavedVariables: ForeverMarketDB
 ## OptionalDeps: ForeverCore
 ## X-Forever-Suite: 1
@@ -11,9 +11,18 @@
 Core.lua
 Database.lua
 Theme.lua
+PriceEngine.lua
+Groups.lua
 Market.lua
 Sell.lua
 Inventory.lua
+Ledger.lua
+Trader.lua
+ShoppingScan.lua
+Advisor.lua
+Crafting.lua
 UI.lua
 UIViews.lua
+UITrader.lua
+UICrafting.lua
 Native.lua
