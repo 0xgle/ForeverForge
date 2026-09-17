@@ -1,4 +1,4 @@
-**# ForeverForge
+# ForeverForge
 
 **A unified World of Warcraft addon ecosystem by [0xgle](https://github.com/0xgle).**
 
