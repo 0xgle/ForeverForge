@@ -1,4 +1,4 @@
-# ForeverBags 0.9.5-beta2
+# ForeverBags 0.9.5-beta4
 
 The bottom of the category sidebar shows the current character's gold, silver and copper in every view. The balance updates on PLAYER_MONEY and when opening or refreshing the window.
 

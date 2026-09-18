@@ -69,7 +69,7 @@ function F:Render()
     local count=0; for _ in pairs(self.pending) do count=count+1 end
     self.footer:SetText(InCombatLockdown() and "Combat lock active  /  Changes are paused" or
         (count>0 and (count.." staged changes  /  Review before applying") or
-        (self.char.reload and "Changes applied  /  Reload UI to finish" or "ForeverCore 1.0.0-rc1  /  by 0xgle")))
+        (self.char.reload and "Changes applied  /  Reload UI to finish" or "ForeverCore 1.0.3-rc4  /  by 0xgle")))
     self.discard:SetShown(count>0); self.apply:SetShown(count>0)
     for name,b in pairs(self.nav) do b:SetBackdropBorderColor(unpack(name==self.page and T.gold or {.18,.25,.25})) end
     local p=self:NewPage()
@@ -130,7 +130,7 @@ function F:RenderHome(p)
 end
 function F:RenderAddons(p)
     if not p.built then
-        p.built=true; self:Header(p,"Your addons","Click a state to stage a change. Required dependencies are handled together.")
+        p.built=true; self:Header(p,"Your addons","Stage addon state changes and toggle detected minimap launchers directly from the list.")
         p.search=T:Edit(p,268,32,0,65); p.search:SetMaxLetters(60)
         T:Text(p,"Search name",10,8,52,250,T.muted)
         p.search:SetScript("OnTextChanged",function() p.offset=0; F:UpdateAddonRows(p) end)
@@ -148,15 +148,24 @@ function F:RenderAddons(p)
         for i=1,5 do
             local row=T:Panel(p,CW,64,0,111+(i-1)*70)
             row.icon=T:Icon(row,1,44,10,10)
-            row.title=T:Text(row,"",14,66,10,324); row.title:SetMaxLines(1)
-            row.info=T:Text(row,"",10,66,33,330,T.muted)
-            row.favorite=T:Button(row,"*",27,27,404,19,function()
+            row.title=T:Text(row,"",14,66,10,232); row.title:SetMaxLines(1)
+            row.info=T:Text(row,"",10,66,33,232,T.muted)
+            row.favorite=T:Button(row,"*",27,27,304,19,function()
                 self.db.favorites[row.id]=not self.db.favorites[row.id]; self:Scan(); self:UpdateAddonRows(p)
             end)
             T:Tip(row.favorite,"Favorite","Pin this addon to the top of the list.")
-            row.open=T:Button(row,"Open",65,27,438,19,function() self:OpenModule(row.id) end)
-            row.settings=T:Button(row,"Config",65,27,509,19,function() self:OpenModule(row.id,true) end)
-            row.state=T:Button(row,"",123,27,582,19,function() self:Stage(row.id,not self:Desired(row.id)) end,true)
+            row.minimap=T:Check(row,"Minimap",92,27,340,19,function(visible)
+                if not row.id then return end
+                if row.id==self.name then
+                    self.db.settings.minimap=visible; self:UpdateMinimap(); self:Refresh()
+                else
+                    self:SetAddonMinimapIconVisible(row.id,visible)
+                end
+            end)
+            T:Tip(row.minimap,"Minimap icon","Show or hide this addon's detected minimap launcher. Uses the same setting as Appearance > Minimap addon icons.")
+            row.open=T:Button(row,"Open",60,27,438,19,function() self:OpenModule(row.id) end)
+            row.settings=T:Button(row,"Config",60,27,504,19,function() self:OpenModule(row.id,true) end)
+            row.state=T:Button(row,"",135,27,570,19,function() self:Stage(row.id,not self:Desired(row.id)) end,true)
             row:EnableMouse(true)
             row:SetScript("OnEnter",function()
                 local a=self.byID[row.id]; if not a then return end
@@ -188,6 +197,9 @@ function F:UpdateAddonRows(p)
             (a.id:lower():find(query,1,true) or a.title:lower():find(query,1,true)) then list[#list+1]=a end
     end
     p.filtered=list; p.offset=math.min(p.offset,math.max(0,math.ceil(#list/5)-1)*5)
+    self:ScanMinimapButtons()
+    local minimapOwners={}
+    for _,key in pairs(self.minimapButtonOwners or {}) do minimapOwners[key]=true end
     for i,row in ipairs(p.rows) do
         local a=list[p.offset+i]; row:SetShown(a~=nil)
         if a then
@@ -196,6 +208,11 @@ function F:UpdateAddonRows(p)
             row.favorite.label:SetTextColor(unpack(self.db.favorites[a.id] and T.gold or T.muted))
             row.open:SetShown(a.id~=self.name and a.spec~=nil and a.spec.open~=nil)
             row.settings:SetShown(a.spec~=nil and a.spec.settings~=nil)
+            local isCore=a.id==self.name
+            local iconKnown=isCore or minimapOwners[a.id] or self.db.settings.minimapIconOverrides[a.id]~=nil
+            row.minimap:SetEnabled(iconKnown)
+            row.minimap.label:SetTextColor(unpack(iconKnown and T.text or T.muted))
+            row.minimap:SetValue(iconKnown and (isCore and self.db.settings.minimap or self:GetAddonMinimapIconVisible(a.id)) or false)
             local staged=self.pending[a.id]~=nil
             row.state.label:SetText(a.id==self.name and "Core / protected" or (staged and "> " or "")..(self:Desired(a.id) and "Enabled" or "Disabled"))
             row.state:SetEnabled(a.id~=self.name)
@@ -305,7 +322,7 @@ function F:RenderAppearance(p)
             self.db.settings.position=nil; self.db.settings.scale=1
             self.frame:ClearAllPoints(); self.frame:SetPoint("CENTER"); self:ApplyScale(); self:RenderAppearance(p)
         end)
-        local map=T:Panel(p,CW,145,0,218)
+        local map=T:Panel(p,CW,168,0,218)
         T:Icon(map,5,60,23,25); T:Text(map,"Minimap launcher",18,111,21,570,T.gold)
         T:Text(map,"Left-click to open. Right-click for Addons. Drag to reposition.",12,111,50,570,T.muted)
         p.map=T:Button(map,"",182,28,111,73,function()
@@ -314,17 +331,21 @@ function F:RenderAppearance(p)
         p.otherIcons=T:Button(map,"",220,28,305,73,function()
             self:SetOtherMinimapButtonsHidden(not self.db.settings.hideOtherMinimapButtons); self:RenderAppearance(p)
         end)
-        T:Text(map,"ForeverCore can keep the minimap clean by hiding third-party addon launchers.",11,111,105,570,T.muted)
-        T:Text(p,"Keyboard shortcut",18,0,386,CW,T.gold)
-        T:Text(p,"Set a key in the game's Key Bindings > AddOns > ForeverCore.\nNo existing game bindings are replaced.\n\nUse /fc or /forevercore at any time. Press Escape to close the window.",13,0,421,CW,T.muted)
+        p.manageIcons=T:Button(map,"Choose individual addon icons",414,28,111,108,function() self:OpenMinimapIconManager() end,true)
+        p.iconSummary=T:Text(map,"",11,111,143,570,T.muted)
+        T:Text(p,"Keyboard shortcut",18,0,405,CW,T.gold)
+        T:Text(p,"Set a key in the game's Key Bindings > AddOns > ForeverCore.\nNo existing game bindings are replaced.\nUse /fc or /forevercore at any time. Press Escape to close the window.",13,0,438,CW,T.muted)
     end
     p.scale:SetText(string.format("Requested: %d%%  /  Automatically fits your screen",math.floor(self.db.settings.scale*100+.5)))
     p.map.label:SetText(self.db.settings.minimap and "Hide Core button" or "Show Core button")
-    p.otherIcons.label:SetText(self.db.settings.hideOtherMinimapButtons and "Other addon icons: hidden" or "Other addon icons: visible")
+    p.otherIcons.label:SetText(self.db.settings.hideOtherMinimapButtons and "Default others: hidden" or "Default others: visible")
+    local groups=self:GetMinimapIconGroups(); local visible=0
+    for _,g in ipairs(groups) do if self:GetAddonMinimapIconVisible(g.key) then visible=visible+1 end end
+    p.iconSummary:SetText(#groups.." addon launchers detected  /  "..visible.." currently allowed on the minimap")
 end
 function F:RenderAbout(p)
     if p.built then return end; p.built=true
-    self:Header(p,"ForeverCore","The Sanctum  /  1.0.1-rc2")
+    self:Header(p,"ForeverCore","The Sanctum  /  1.0.3-rc4")
     T:Icon(p,1,126,0,80)
     T:Text(p,"A home for every Forever addon.",23,151,96,555,T.gold)
     T:Text(p,"Created by 0xgle\nCopyright 2026 0xgle. All rights reserved.",14,151,139,555)
@@ -332,6 +353,62 @@ function F:RenderAbout(p)
     T:Text(p,"Discover installed Forever addons automatically. Launch supported modules, save addon loadouts and review every change before a reload.\n\nForeverBags and ForeverGather have built-in launchers. Other addons can register with the documented ForeverCore API.\n\nThis release targets Classic Era 1.15.9. Other clients, including Forever, need an in-game compatibility check. The addon cannot download or update files from the internet.",14,0,274,CW,T.muted)
     T:Text(p,"Original UI code and AI-assisted original artwork. No external runtime libraries required.",11,0,466,CW,T.muted)
 end
+
+function F:BuildIconManager()
+    if self.iconManager then return self.iconManager end
+    self:BuildUI()
+    local shade=CreateFrame("Frame","ForeverCoreIconManager",self.frame); shade:SetAllPoints(); shade:SetFrameLevel(self.frame:GetFrameLevel()+50); shade:EnableMouse(true)
+    local dark=shade:CreateTexture(nil,"BACKGROUND"); dark:SetAllPoints(); dark:SetColorTexture(0,0,0,.80)
+    local box=T:Panel(shade,650,500,0,0,{.025,.05,.055,1}); box:ClearAllPoints(); box:SetPoint("CENTER",shade,"CENTER",0,0)
+    box.title=T:Text(box,"Minimap addon icons",22,22,20,420,T.gold)
+    box.hint=T:Text(box,"Keep everything hidden by default, then allow only the launchers you actually want.",12,22,54,605,T.muted)
+    box.default=T:Button(box,"",238,30,22,82,function()
+        F:SetOtherMinimapButtonsHidden(not F.db.settings.hideOtherMinimapButtons); F:RefreshIconManager()
+    end)
+    box.refresh=T:Button(box,"Rescan minimap",146,30,272,82,function() F:Scan(); F:ApplyMinimapButtonPolicy(); F:RefreshIconManager() end)
+    box.rows={}; shade.offset=0
+    for i=1,6 do
+        local row=T:Panel(box,606,48,22,126+(i-1)*52)
+        row.title=T:Text(row,"",13,12,8,260); row.title:SetMaxLines(1)
+        row.info=T:Text(row,"",10,12,27,300,T.muted); row.info:SetMaxLines(1)
+        row.toggle=T:Button(row,"",112,28,374,10,function()
+            if row.key then F:SetAddonMinimapIconVisible(row.key,not F:GetAddonMinimapIconVisible(row.key)); F:RefreshIconManager() end
+        end,true)
+        row.reset=T:Button(row,"Default",96,28,496,10,function()
+            if row.key then F:SetAddonMinimapIconVisible(row.key,nil); F:RefreshIconManager() end
+        end)
+        box.rows[i]=row
+    end
+    box.empty=T:Text(box,"No third-party minimap launchers detected yet. Open or reload the relevant addon, then Rescan minimap.",13,36,160,570,T.muted)
+    box.count=T:Text(box,"",11,22,448,250,T.muted)
+    box.prev=T:Button(box,"Previous",96,30,326,438,function() shade.offset=math.max(0,shade.offset-6); F:RefreshIconManager() end)
+    box.next=T:Button(box,"Next",96,30,432,438,function() if shade.offset+6<#(shade.list or {}) then shade.offset=shade.offset+6 end; F:RefreshIconManager() end)
+    box.close=T:Button(box,"Close",96,30,532,438,function() shade:Hide() end)
+    shade.box=box; shade:Hide(); self.iconManager=shade
+    UISpecialFrames[#UISpecialFrames+1]="ForeverCoreIconManager"
+    return shade
+end
+function F:RefreshIconManager()
+    local m=self:BuildIconManager(); local b=m.box
+    self:ApplyMinimapButtonPolicy(); local list=self:GetMinimapIconGroups(); m.list=list
+    m.offset=math.min(m.offset or 0,math.max(0,math.ceil(#list/6)-1)*6)
+    b.default.label:SetText(self.db.settings.hideOtherMinimapButtons and "Default: hide other icons" or "Default: show other icons")
+    for i,row in ipairs(b.rows) do
+        local g=list[m.offset+i]; row:SetShown(g~=nil)
+        if g then
+            row.key=g.key; row.title:SetText(g.title or g.key)
+            row.info:SetText((g.id and ("Addon: "..g.id) or ("Launcher: "..g.key:gsub("^button:",""))).."  /  "..g.count.." button"..(g.count==1 and "" or "s"))
+            local visible=self:GetAddonMinimapIconVisible(g.key)
+            row.toggle.label:SetText(visible and "Visible" or "Hidden")
+            row.reset:SetShown(self.db.settings.minimapIconOverrides[g.key]~=nil)
+        end
+    end
+    b.empty:SetShown(#list==0); b.count:SetText(#list.." detected  /  Page "..(math.floor(m.offset/6)+1).." of "..math.max(1,math.ceil(#list/6)))
+end
+function F:OpenMinimapIconManager()
+    self:BuildUI(); local m=self:BuildIconManager(); m.offset=0; self:RefreshIconManager(); m:Show()
+end
+
 function F:BuildModal()
     if self.modal then return self.modal end
     local shade=CreateFrame("Frame",nil,self.frame); shade:SetAllPoints(); shade:SetFrameLevel(self.frame:GetFrameLevel()+40); shade:EnableMouse(true)

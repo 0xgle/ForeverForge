@@ -29,10 +29,19 @@
     An item without history or a preset must not receive an invented price.
 14. After posting, verify inventory quantities refresh. Cancelling confirmation
     must never post an auction.
-15. Check all seven tabs, help text and confirmations are English. Item names and
+15. Check every tab, help text and confirmations are English. Item names and
     game-generated messages should continue to follow the client locale. Confirm
     pre-existing user-created list names remain unchanged.
 
 For errors, use `/console scriptErrors 1` and `/reload`. Record the full error,
 `/fm debug` output, active tab and action. Use inexpensive items for transaction
 tests: these are real operations involving your character's gold.
+
+## 2.1 Flip & Empire checks
+
+16. In Market, load an item with a meaningful local history and at least two price levels. Open **Flip Finder** and click **Analyze loaded**. Verify buy cost, exit plan, net profit, ROI and confidence are sensible and that an equal-price wall is not treated as an easy flip.
+17. Add two inexpensive items to the watchlist with Shift-click and run **Watch scan**. The addon must respect the normal query throttle and keep partial results if Stop is pressed.
+18. Click **Review** on a flip. ForeverMarket must refresh stale data before purchase; if the price no longer meets the configured filters it should warn you and must not silently keep the old profit claim.
+19. Buy one inexpensive reviewed flip, then later sell it. In **Ledger > Empire**, switch the chart to **Flip profit** and verify realized profit appears only after a SOLD row is observed.
+20. Log each test character once. In **Ledger > Empire**, confirm the account gold total and character rows reflect the latest seen gold for each character. Switch between **Net sales** and **Flip profit** charts.
+21. Hover a tracked flip item and verify the tooltip shows tracked quantity and average flip cost.

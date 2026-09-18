@@ -22,12 +22,12 @@ function M:Stop()
     if self.transaction then self.transaction.log.status="tracking stopped; check mail/auctions" end
     self:Invalidate();self.request=nil;self.queued=nil;self.transaction=nil;self.mode=nil
 end
-function M:Search(text,page,exact)
+function M:Search(text,page,exact,filters)
     if not self:Ready() then return end
     text=tostring(text or ""):match("^%s*(.-)%s*$")
     if #text>63 then FM:Status("The name is too long (maximum 63 bytes).");return end
     if self.request then FM:Status("Search in progress. Please wait or click Stop.");return end
-    self:Queue({text=text,page=math.max(0,page or 0),exact=not not exact,full=false})
+    self:Queue({text=text,page=math.max(0,page or 0),exact=not not exact,full=false,filters=filters})
 end
 function M:FullScan()
     if not self:Ready() or self.request then return end
@@ -46,9 +46,14 @@ function M:SendQueued()
     if not can then FM:After(.3,function() M:SendQueued() end);return end
     if q.full and not all then self.queued=nil;FM:Status("Full scan is on cooldown.");return end
     self.queued=nil;self.request=q;self.mode=q.full and "scan" or "search"
-    self.page=q.page;self.query=q.text;self.exact=q.exact
+    self.page=q.page;self.query=q.text;self.exact=q.exact;self.filters=q.filters
     self.sending=true
-    local ok,err=pcall(QueryAuctionItems,q.text,nil,nil,q.page,false,nil,q.full,q.exact,nil)
+    local f=q.filters or {}
+    local filterData=nil
+    if f.classID~=nil then
+        filterData={{classID=f.classID,subClassID=f.subClassID,inventoryType=nil}}
+    end
+    local ok,err=pcall(QueryAuctionItems,q.text,f.minLevel,f.maxLevel,q.page,f.usable or false,f.quality,q.full,q.exact,filterData)
     self.sending=false
     if not ok then self.request=nil;FM:Status("Query error: "..tostring(err));return end
     FM:Status(q.full and "Full market scan: waiting for data..." or "Searching: "..(q.text~="" and q.text or "all items"))
@@ -112,6 +117,7 @@ function M:ReadBrowse()
     if FM.Sell and FM.Sell.pendingCheck then FM.Sell:OnMarketResults() end
     if FM.Trader and FM.Trader.scan then FM.Trader:OnMarketResults() end
     if FM.ShoppingScan and FM.ShoppingScan.scan then FM.ShoppingScan:OnMarketResults() end
+    if FM.Flip and (FM.Flip.scan or FM.Flip.review) then FM.Flip:OnMarketResults() end
     FM:Refresh()
 end
 function M:Valid(row,kind)
@@ -138,7 +144,9 @@ function M:Buy(row,bidding)
     if bidding and row.buyout>0 then amount=math.min(amount,row.buyout) end
     if amount>GetMoney() then FM:Status("You do not have enough gold.");return end
     local kind=bidding and "Bid" or "Purchase"
-    FM.UI:Confirm(kind,row,(row.link or row.name).."\nQuantity: "..row.count.."  |  Total: "..FM:Money(amount).."\nUnit price: "..FM:Money(amount/row.count),function()
+    local flipLine=""
+    if row.flipCandidate and row.flipPlan then flipLine="\nFlip plan: exit "..FM:Money(row.flipPlan.exitUnit).." / item | net "..(row.flipPlan.profit>=0 and "+" or "-")..FM:Money(math.abs(row.flipPlan.profit)) end
+    FM.UI:Confirm(kind,row,(row.link or row.name).."\nQuantity: "..row.count.."  |  Total: "..FM:Money(amount).."\nUnit price: "..FM:Money(amount/row.count)..flipLine,function()
         if not M:Valid(row,"list") or GetMoney()<amount then return end
         M:BeginTransaction(kind,row,amount)
         local ok,err=pcall(PlaceAuctionBid,"list",row.index,amount)
@@ -281,7 +289,7 @@ FM:On("CHAT_MSG_SYSTEM",function(msg)
     if accepted then
         t.log.status="accepted by server";M.transaction=nil
         if FM.Ledger then
-            if t.kind=="Purchase" then FM.Ledger:Record("BUY",t.row,t.amount,t.row and t.row.count,"Server accepted purchase")
+            if t.kind=="Purchase" then FM.Ledger:Record("BUY",t.row,t.amount,t.row and t.row.count,(t.row and t.row.flipCandidate) and "Flip purchase" or "Server accepted purchase")
             elseif t.kind=="Posting" then FM.Ledger:Record("POST",t.row,t.amount,t.row and t.row.count,"Server accepted posting")
             elseif t.kind=="Cancellation" then FM.Ledger:Record("CANCEL",t.row,0,t.row and t.row.count,"Server accepted cancellation") end
         end

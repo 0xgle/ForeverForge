@@ -51,6 +51,37 @@ function T:Button(parent,text,w,h,x,y,fn,primary)
     b:SetScript("OnEnter",function() paint(true) end); b:SetScript("OnLeave",function() paint(false) end)
     b:SetScript("OnClick",fn); return b
 end
+
+function T:Check(parent,text,w,h,x,y,fn)
+    local b=CreateFrame("Button",nil,parent)
+    b:SetSize(w or 92,h or 26); b:SetPoint("TOPLEFT",parent,"TOPLEFT",x or 0,-(y or 0))
+    local box=self:Panel(b,20,20,0,3,{.02,.045,.049,1})
+    box:ClearAllPoints(); box:SetPoint("LEFT",b,"LEFT",0,0)
+    local mark=box:CreateTexture(nil,"OVERLAY")
+    mark:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    mark:SetSize(26,26); mark:SetPoint("CENTER",box,"CENTER",0,0)
+    local label=b:CreateFontString(nil,"OVERLAY")
+    label:SetFont(STANDARD_TEXT_FONT,11,""); label:SetPoint("LEFT",box,"RIGHT",6,0)
+    label:SetTextColor(unpack(self.text)); label:SetText(text or "")
+    b.box=box; b.mark=mark; b.label=label; b.value=false
+    function b:SetValue(v)
+        self.value=not not v
+        self.mark:SetShown(self.value)
+        if self.value then self.box:SetBackdropBorderColor(unpack(T.teal)) else self.box:SetBackdropBorderColor(.27,.32,.29,1) end
+    end
+    function b:GetValue() return self.value end
+    b:SetScript("OnEnter",function() box:SetBackdropBorderColor(unpack(T.gold)) end)
+    b:SetScript("OnLeave",function()
+        if b.value then box:SetBackdropBorderColor(unpack(T.teal)) else box:SetBackdropBorderColor(.27,.32,.29,1) end
+    end)
+    b:SetScript("OnClick",function()
+        b:SetValue(not b.value)
+        if fn then fn(b.value) end
+    end)
+    b:SetValue(false)
+    return b
+end
+
 function T:Edit(parent,w,h,x,y,multi)
     local bg=self:Panel(parent,w,h,x,y,{.02,.045,.049,1})
     local e=CreateFrame("EditBox",nil,bg)

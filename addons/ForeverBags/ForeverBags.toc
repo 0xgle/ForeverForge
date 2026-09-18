@@ -1,8 +1,8 @@
-## Interface: 120100, 120001, 11509
+## Interface: 120100, 120001
 ## Title: ForeverBags
-## Notes: Premium one-window inventory, bank, alts and discovery manager. Created by 0xgle. All rights reserved.
+## Notes: Premium one-window inventory for WoW Forever. Created by 0xgle. All rights reserved.
 ## Author: 0xgle
-## Version: 0.9.5-beta2
+## Version: 0.9.7-beta6
 ## SavedVariables: ForeverBagsDB
 ## IconTexture: Interface\\AddOns\\ForeverBags\\Media\\Icons\\bag.tga
 ## Category: Bags & Inventory

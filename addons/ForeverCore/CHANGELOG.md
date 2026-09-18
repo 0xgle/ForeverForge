@@ -1,12 +1,23 @@
-# ForeverCore 1.0.1 RC2
+# ForeverCore Changelog
 
+## 1.0.3-rc4
+- Added an inline Minimap checkbox to each row in Your Addons.
+- The checkbox reuses the existing per-addon minimap visibility system, so it stays synchronized with Appearance > Minimap addon icons.
+- ForeverCore launcher visibility can now be toggled from its own addon row as well.
+- Rows without a detected or previously managed minimap launcher show the control as unavailable instead of creating a fake setting.
+
+## 1.0.2-rc3
+- Added per-addon minimap icon control: keep all third-party launchers hidden by default, then allow selected addon icons individually.
+- Added a dedicated Minimap addon icons manager in Appearance and `/fc icons`.
+- Added rescanning after delayed addon loads so late-created LibDBIcon/LDB launchers are picked up.
+- Core minimap artwork now uses transparency so the square dark background is removed.
+
+## 1.0.1-rc2
 - Minimap cleanup is enabled by default: ForeverCore keeps its own launcher and hides detected third-party addon minimap buttons.
 - Added Appearance toggle for third-party minimap icons.
 - Added `/fc icons` quick toggle.
 - Re-scans shortly after login to catch late-created LibDataBroker/LibDBIcon launchers.
 - Blizzard minimap controls are excluded from cleanup.
-
-# Changelog
 
 ## 1.0.0-rc1
 

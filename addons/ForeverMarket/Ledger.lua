@@ -9,8 +9,11 @@ function L:Ensure()
 end
 function L:Record(kind,row,amount,quantity,note)
     self:Ensure();row=row or {};quantity=quantity or row.count or 1
+    local charKey=FM.Empire and FM.Empire.CharacterKey and FM.Empire:CharacterKey() or ((UnitName("player") or "?").." / "..(GetRealmName() or "?").." / "..(UnitFactionGroup("player") or "neutral"))
     local e={t=time(),kind=kind,key=row.key or FM:ItemKey(row.link,row.name),name=row.name or "?",link=row.link,
-        amount=math.floor(tonumber(amount) or 0),quantity=math.max(1,tonumber(quantity) or 1),note=note}
+        amount=math.floor(tonumber(amount) or 0),quantity=math.max(1,tonumber(quantity) or 1),note=note,
+        character=charKey,characterName=UnitName("player") or "?",realm=GetRealmName() or "?",faction=UnitFactionGroup("player") or "neutral",
+        flip=row.flipCandidate==true}
     e.unit=e.quantity>0 and e.amount/e.quantity or 0
     local list=FM.Data.ledger.entries;list[#list+1]=e
     while #list>1000 do table.remove(list,1) end

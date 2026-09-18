@@ -1,27 +1,22 @@
 local _, FMH = ...
-FMH.Media = FMH.Media or {}
-local M = FMH.Media
-M.base = "Interface\\AddOns\\ForeverMacroHelper\\Media\\"
-M.icons = M.base .. "Icons\\"
-M.textures = M.base .. "Textures\\"
-function M:Icon(name) return self.icons .. name .. ".tga" end
-function M:Texture(name) return self.textures .. name .. ".tga" end
-function M:SetBackdrop(frame, alpha)
-    if not frame.SetBackdrop then return end
-    frame:SetBackdrop({bgFile=self:Texture("obsidian"),edgeFile="Interface\\Buttons\\WHITE8x8",edgeSize=1})
-    frame:SetBackdropColor(0.035,0.055,0.072,alpha or 0.98)
-    frame:SetBackdropBorderColor(0.50,0.37,0.16,1)
+local M={};FMH.Media=M
+M.base='Interface\\AddOns\\ForeverMacroHelper\\Media\\'
+function M:Icon(name) return self.base..'Icons\\'..name..'.tga' end
+function M:Texture(name) return self.base..'Textures\\'..name..'.tga' end
+function M:SetBackdrop(frame,alpha)
+    frame:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8x8',edgeFile='Interface\\Buttons\\WHITE8x8',edgeSize=1})
+    frame:SetBackdropColor(0.02,0.03,0.04,alpha or 1);frame:SetBackdropBorderColor(0.46,0.35,0.18,1)
 end
-function M:SetPanel(frame, alpha)
-    if not frame.SetBackdrop then return end
-    frame:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8",edgeFile="Interface\\Buttons\\WHITE8x8",edgeSize=1})
-    frame:SetBackdropColor(0.025,0.04,0.055,alpha or 0.88)
-    frame:SetBackdropBorderColor(0.18,0.27,0.31,0.95)
+function M:SetPanel(frame,alpha)
+    frame:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8x8',edgeFile='Interface\\Buttons\\WHITE8x8',edgeSize=1})
+    frame:SetBackdropColor(0.025,0.041,0.053,alpha or 0.95);frame:SetBackdropBorderColor(0.19,0.27,0.29,0.9)
 end
-function M:SetButton(frame, active, danger)
-    if not frame.SetBackdrop then return end
-    frame:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8",edgeFile="Interface\\Buttons\\WHITE8x8",edgeSize=1})
-    if danger then frame:SetBackdropColor(0.25,0.055,0.045,0.95); frame:SetBackdropBorderColor(0.85,0.22,0.16,1)
-    elseif active then frame:SetBackdropColor(0.025,0.25,0.32,0.98); frame:SetBackdropBorderColor(0.18,0.82,1,1)
-    else frame:SetBackdropColor(0.035,0.055,0.072,0.96); frame:SetBackdropBorderColor(0.36,0.30,0.20,0.95) end
+function M:SetButton(frame,active,danger)
+    if not frame._styled then
+        frame:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8x8',edgeFile='Interface\\Buttons\\WHITE8x8',edgeSize=1})
+        frame._styled=true
+    end
+    if danger then frame:SetBackdropColor(0.24,0.07,0.055,1);frame:SetBackdropBorderColor(0.62,0.25,0.17,1)
+    elseif active then frame:SetBackdropColor(0.04,0.19,0.22,1);frame:SetBackdropBorderColor(0.23,0.66,0.68,1)
+    else frame:SetBackdropColor(0.04,0.065,0.078,0.97);frame:SetBackdropBorderColor(0.27,0.30,0.27,0.8) end
 end

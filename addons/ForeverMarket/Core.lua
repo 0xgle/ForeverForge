@@ -1,6 +1,6 @@
 local ADDON, FM = ...
 _G.ForeverMarket = FM
-FM.name, FM.version, FM.author = ADDON, "2.0.0-beta1", "0xgle"
+FM.name, FM.version, FM.author = ADDON, "2.2.1-beta1", "0xgle"
 FM.media = "Interface\\AddOns\\ForeverMarket\\Media\\"
 FM.callbacks = {}
 FM.Events = CreateFrame("Frame")
@@ -72,7 +72,7 @@ FM:On("PLAYER_LOGIN",function()
     if not FM.DB then FM:InitDB() end
     FM:Print("v"..FM.version.."  |cff65d6c1by 0xgle|r  /fm")
     if ForeverCore and ForeverCore.apiVersion==1 then
-        ForeverCore:RegisterModule(ADDON,{title="ForeverMarket",description="Market, Trader Engine, operations, ledger and shopping.",icon=12,
+        ForeverCore:RegisterModule(ADDON,{title="ForeverMarket",description="Market, Trader Engine, Flip Finder, Empire analytics and shopping.",icon=12,
             open=function() FM.UI:Toggle() end,settings=function() FM.UI:Show(); FM.UI:SetTab("Settings") end})
     end
 end)

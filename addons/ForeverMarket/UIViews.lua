@@ -245,6 +245,7 @@ function U:Refresh()
     elseif self.activeTab=="Sell" then self:RefreshSell()
     elseif self.activeTab=="Bids" then self:RefreshBids()
     elseif self.activeTab=="Shopping" then self:RefreshShopping()
+    elseif self.activeTab=="Flips" then self:RefreshFlips()
     elseif self.activeTab=="Trader" then self:RefreshTrader()
     elseif self.activeTab=="Advisor" then self:RefreshAdvisor()
     elseif self.activeTab=="Ledger" then self:RefreshLedger()
@@ -264,6 +265,8 @@ FM:On("PLAYER_LOGIN",function()
             if h then tip:AddLine("ForeverMarket | market: "..FM:Money(h.median).." / item",.6,.84,.78);tip:AddLine("Recent low: "..FM:Money(src.FMMinBuyout or h.low).." | "..h.count.." samples | "..math.floor((time()-h.t)/60).." min",.6,.66,.67) end
             local buy,sell=FM.Ledger:Averages(key);local owned=FM.Ledger:OwnedEverywhere(key);local _,g=FM.Groups:GroupFor(key)
             if buy or sell then tip:AddLine("Avg buy: "..(buy and FM:Money(buy) or "-").." | Avg sell: "..(sell and FM:Money(sell) or "-"),.72,.72,.72) end
+            local fp=FM.Flip and FM.Flip:PositionFor(key,FM.realmKey)
+            if fp and fp.qty and fp.qty>0 then tip:AddLine("Tracked flip: x"..fp.qty.." | avg cost "..FM:Money(fp.cost/fp.qty),.83,.68,.42) end
             if owned>0 or (g and not g.system) then tip:AddLine("Owned: "..owned.." | Group: "..(g and g.name or "Ungrouped"),.72,.72,.72) end
         end)
     end

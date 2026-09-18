@@ -1,0 +1,12 @@
+FOREVERCHAT 0.2.0-beta1 — by 0xgle
+
+1. Zamknij całkowicie WoW.
+2. W folderze World of Warcraft\_classic_era_\Interface\AddOns\ podmień folder ForeverChat na folder z tej paczki.
+3. Poprawna ścieżka: AddOns\ForeverChat\ForeverChat.toc.
+4. Włącz addon na liście dodatków i wpisz /fc w grze.
+5. Ustawienia: zębatka albo /fc settings. Reset pozycji: /fc reset.
+
+Nie usuwaj pliku SavedVariables\ForeverChat.lua — zawiera ustawienia i historię.
+Ikona minimapy jest domyślnie wyłączona. Można włączyć ją w ustawieniach.
+Teksty interfejsu pozostają po angielsku, zgodnie z prototypem i klientem gry.
+Przeznaczenie: Classic Era / Hardcore, Interface 11509. Przyszły klient Forever wymaga osobnego testu.

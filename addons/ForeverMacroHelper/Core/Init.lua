@@ -1,7 +1,7 @@
 local ADDON_NAME, FMH = ...
 _G.ForeverMacroHelper = FMH
 FMH.name = ADDON_NAME
-FMH.version = "0.1.0-beta"
+FMH.version = "0.2.0-beta2"
 FMH.author = "0xgle"
 FMH.copyright = "© 2026 0xgle. All rights reserved."
 FMH.isClassicEra = WOW_PROJECT_CLASSIC and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC or false

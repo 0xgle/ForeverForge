@@ -1,7 +1,7 @@
 local ADDON_NAME, FB = ...
 _G.ForeverBags = FB
 FB.name = ADDON_NAME
-FB.version = "0.9.5-beta2"
+FB.version = "0.9.7-beta6"
 FB.author = "0xgle"
 FB.copyright = "© 2026 0xgle. All rights reserved."
 FB.projectID = WOW_PROJECT_ID

@@ -9,10 +9,10 @@ function M:Build()
     local b=CreateFrame("Button","ForeverMacroHelperMinimapButton",Minimap)
     b:SetSize(34,34); b:SetFrameStrata("MEDIUM"); b:SetFrameLevel(Minimap:GetFrameLevel()+8)
     local bg=b:CreateTexture(nil,"BACKGROUND"); bg:SetAllPoints(); bg:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    local ic=b:CreateTexture(nil,"ARTWORK"); ic:SetSize(20,20); ic:SetPoint("CENTER",-1,1); ic:SetTexture("Interface\\Icons\\INV_Misc_Note_02")
+    local ic=b:CreateTexture(nil,"ARTWORK"); ic:SetSize(20,20); ic:SetPoint("CENTER",-1,1); ic:SetTexture(FMH.Media:Icon("macro"))
     b:RegisterForClicks("LeftButtonUp","RightButtonUp"); b:RegisterForDrag("LeftButton")
     b:SetScript("OnClick",function(_,button)
-        if button=="RightButton" and FMH.frame then FMH:ToggleSettings() else FMH:Toggle() end
+        if button=="RightButton" then FMH:BuildMainFrame():Show(); FMH:ToggleSettings() else FMH:Toggle() end
     end)
     b:SetScript("OnEnter",function(self)
         GameTooltip:SetOwner(self,"ANCHOR_LEFT"); GameTooltip:AddLine("ForeverMacroHelper",1,0.82,0.35)
@@ -21,7 +21,7 @@ function M:Build()
     b:SetScript("OnLeave",function() GameTooltip:Hide() end)
     b:SetScript("OnDragStart",function(self)
         self:SetScript("OnUpdate",function(btn)
-            local mx,my=Minimap:GetCenter(); local cx,cy=GetCursorPosition(); local s=UIParent:GetEffectiveScale(); cx,cy=cx/s,cy/s
+            local mx,my=Minimap:GetCenter(); local cx,cy=GetCursorPosition(); local s=Minimap:GetEffectiveScale(); cx,cy=cx/s,cy/s
             local dy,dx=cy-my,cx-mx; local a
             if math.atan2 then a=math.atan2(dy,dx) elseif dx==0 then a=dy>=0 and math.pi/2 or -math.pi/2 else a=math.atan(dy/dx); if dx<0 then a=a+math.pi end end
             FMH.settings.minimapAngle=math.deg(a); UpdatePosition(btn)

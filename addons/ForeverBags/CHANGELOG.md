@@ -1,4 +1,32 @@
+# 0.9.7-beta6 — WoW Forever toolbar polish
+
+- Reworked the top search, sort, settings and close controls to use textured vault-style panels instead of flat black rectangles.
+- Added subtle gold/teal edge lighting, hover states and search focus state.
+- Added icon separators and improved search text/placeholder contrast.
+- No inventory logic or layout behavior changed.
+
+# 0.9.6-beta5 — WoW Forever API fix
+
+- Targeted WoW Forever only.
+- Replaced removed global item API calls with `C_Item.GetItemInfo` and `C_Item.GetItemInfoInstant`.
+- Item lookups now prefer numeric item IDs, preventing short links such as `[Hearthstone]` from breaking enrichment.
+- Added a safe instant-info path when full item data is not cached yet.
+
 # Changelog
+
+## 0.9.5-beta4 — normal item slots
+
+- Removed the legacy `slot_frame` texture from item-button creation entirely, so the cyan bloom cannot reappear through texture state changes.
+- Removed the old new-item glow texture object entirely; new-item status is now data-only for Recent/search logic.
+- Regular item slots use a plain dark background with a thin rarity-colored border and a subtle gold hover outline.
+- No changes to native Blizzard item interaction, stack counts, item levels, favorites, tags or merchant behavior.
+
+## 0.9.5-beta3 — clean item slots
+
+- Removed the cyan ADD glow that made normal items look permanently highlighted.
+- Removed the decorative slot-frame overlay from regular inventory items.
+- Kept thin rarity-colored borders, stack counts, item levels, hover feedback and all item interaction logic unchanged.
+- New-item state is still tracked for Recent/search filters, but no longer changes the slot into a glowing blue frame.
 
 ## 0.9.5-beta2 — player money
 

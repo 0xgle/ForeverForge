@@ -3,38 +3,43 @@ local FC = {}
 _G.ForeverChat = FC
 
 FC.name = addonName or "ForeverChat"
-FC.version = "0.3.0-beta1"
+FC.version = "0.2.0-beta1"
 FC.prefix = "ForeverChat"
 FC.initialized = false
 FC.initError = nil
-FC.historyLimit = 500
-FC.pendingMessages = 0
+FC.historyLimit = 400
 FC.unread = {}
 FC.currentTab = "ALL"
 FC.peerSeen = {}
 FC.duplicateCache = {}
 
 local defaults = {
-    schemaVersion = 3,
     shown = true,
     x = 30,
     y = 160,
-    width = 1000,
-    height = 650,
+    width = 980,
+    height = 560,
     scale = 1.0,
     fontSize = 13,
-    messageSpacing = 3,
-    opacity = 1.0,
     timestamps = true,
     history = {},
     blockedWords = {},
     compact = false,
-    showRail = true,
-    mentionAlerts = true,
-    dangerAlerts = true,
-    duplicateFilter = true,
-    autoDanger = true,
-    theme = "GOLD",
+    locked = false,
+    opacity = 0.97,
+    sound = false,
+    toasts = true,
+    combatQuiet = true,
+    classColors = true,
+    saveHistory = true,
+    showMinimap = false,
+    historySize = 800,
+    duplicateSeconds = 8,
+    lfgMinutes = 10,
+    lfgRole = "ANY",
+    dungeon = "",
+    favorites = {},
+
 }
 
 local tabs = { "ALL", "GROUP", "GUILD", "WHISPERS", "LFG", "TRADE", "ALERTS" }
@@ -49,24 +54,16 @@ local tabLabels = {
 }
 
 local colors = {
-    bg = {0.025, 0.035, 0.038, 1},
-    panel = {0.035, 0.055, 0.056, 1},
-    panel2 = {0.055, 0.080, 0.080, 1},
-    border = {0.26, 0.29, 0.25, 1},
-    gold = {0.84, 0.68, 0.40, 1},
+    bg = {0.035, 0.043, 0.052, 0.98},
+    panel = {0.055, 0.066, 0.078, 0.99},
+    panel2 = {0.075, 0.087, 0.10, 1},
+    border = {0.20, 0.23, 0.27, 1},
+    gold = {0.86, 0.65, 0.25, 1},
     teal = {0.22, 0.80, 0.72, 1},
     text = {0.92, 0.94, 0.96, 1},
     muted = {0.56, 0.61, 0.67, 1},
     red = {0.96, 0.30, 0.29, 1},
 }
-
-local themeAccents = {
-    GOLD = {0.84, 0.68, 0.40, 1},
-    AZERITE = {0.24, 0.62, 0.96, 1},
-    TEAL = {0.22, 0.80, 0.72, 1},
-    BLOOD = {0.92, 0.28, 0.25, 1},
-}
-local themeOrder = {"GOLD", "AZERITE", "TEAL", "BLOOD"}
 
 local function copyDefaults(src, dst)
     for k, v in pairs(src) do
@@ -100,7 +97,7 @@ end
 
 local function text(parent, size, color, flags)
     local f = parent:CreateFontString(nil, "OVERLAY")
-    f:SetFont(STANDARD_TEXT_FONT, math.max(10, size or 12), "")
+    f:SetFont(STANDARD_TEXT_FONT, size or 12, flags or "")
     f:SetTextColor(color[1], color[2], color[3], color[4] or 1)
     f:SetJustifyH("LEFT")
     f:SetJustifyV("MIDDLE")
@@ -235,16 +232,11 @@ function FC:IsBlocked(sender, msg)
 end
 
 function FC:IsDuplicate(sender, msg)
-    if self.db and self.db.duplicateFilter == false then return false end
     if not sender or sender == "" or not msg then return false end
     local key = tostring(sender) .. "\031" .. plain(msg)
     local now = GetTime and GetTime() or 0
     local last = self.duplicateCache[key]
     self.duplicateCache[key] = now
-    if not self.cacheCleaned or now - self.cacheCleaned > 30 then
-        for k, t in pairs(self.duplicateCache) do if now - t > 10 then self.duplicateCache[k] = nil end end
-        self.cacheCleaned = now
-    end
     return last and (now - last) < 4
 end
 
@@ -256,20 +248,15 @@ function FC:AddRecord(r)
     while #self.db.history > self.historyLimit do table.remove(self.db.history, 1) end
 
     for _, tab in ipairs(tabs) do
-        if (tab ~= self.currentTab or not self.frame or not self.frame:IsShown()) and self:MatchesTab(r, tab) then
+        if tab ~= self.currentTab and self:MatchesTab(r, tab) then
             self.unread[tab] = (self.unread[tab] or 0) + 1
         end
     end
 
     if self.initialized then
-        if self.paused and self:MatchesTab(r, self.currentTab) and self:MatchesSearch(r, self:GetSearch()) then
-            self.pendingMessages = (self.pendingMessages or 0) + 1
-        end
         self:Render(false)
         self:UpdateRail()
-        local showMention = r.isMention and self.db.mentionAlerts ~= false
-        local showDanger = r.isNetwork and not r.isLocal and self.db.dangerAlerts ~= false
-        if showMention or showDanger then self:ShowToast(r) end
+        if r.isMention or (r.isNetwork and not r.isLocal) then self:ShowToast(r) end
     end
 end
 
@@ -338,17 +325,14 @@ function FC:UpdateTabs()
         if b then
             local n = self.unread[tab] or 0
             local caption = tabLabels[tab]
-            if b.badge then b.badge:SetText(n > 0 and tostring(math.min(n, 99)) or "") end
+            if n > 0 then caption = caption .. " " .. math.min(n, 99) end
             b.label:SetText(caption)
             if tab == self.currentTab then
-                local c = self:GetAccent()
                 b.label:SetTextColor(colors.text[1], colors.text[2], colors.text[3])
                 b.line:Show()
-                if b.activeBg then b.activeBg:Show() end
             else
                 b.label:SetTextColor(colors.muted[1], colors.muted[2], colors.muted[3])
                 b.line:Hide()
-                if b.activeBg then b.activeBg:Hide() end
             end
         end
     end
@@ -357,19 +341,11 @@ end
 function FC:Render(force)
     if not self.messages or not self.db then return end
     if not force and self.frame and not self.frame:IsShown() then return end
-    if self.paused and not force then
-        self:UpdateTabs()
-        self:UpdateStatus()
-        self:UpdateJump()
-        return
-    end
-    self.paused = false
-    self.pendingMessages = 0
     self.messages:Clear()
     local query = self:GetSearch()
     local shown = 0
     local history = self.db.history
-    local first = 1
+    local first = math.max(1, #history - 399)
     for i = first, #history do
         local r = history[i]
         if self:MatchesTab(r, self.currentTab) and self:MatchesSearch(r, query) then
@@ -381,7 +357,6 @@ function FC:Render(force)
     if self.messages.ScrollToBottom then self.messages:ScrollToBottom() end
     self:UpdateTabs()
     self:UpdateStatus()
-    self:UpdateJump()
 end
 
 function FC:UpdateStatus()
@@ -389,7 +364,7 @@ function FC:UpdateStatus()
     local peers = 0
     local now = time()
     for _, t in pairs(self.peerSeen) do if now - t < 300 then peers = peers + 1 end end
-    self.status:SetText((self.paused and "HISTORY" or "LIVE") .. "  /  " .. #self.db.history .. " messages  /  " .. peers .. " peers")
+    self.status:SetText("LIVE  /  " .. #self.db.history .. " stored  /  " .. peers .. " Forever peer(s)  /  /fc help")
 end
 
 function FC:UpdateRail()
@@ -398,11 +373,11 @@ function FC:UpdateRail()
     for i = #self.db.history, 1, -1 do
         local r = self.db.history[i]
         if r.isWhisper and r.sender and r.sender ~= "" then
-            local key = r.sender
+            local key = self:ShortName(r.sender)
             if not seen[key] then
                 seen[key] = true
                 table.insert(list, r)
-                if #list >= 2 then break end
+                if #list >= 3 then break end
             end
         end
     end
@@ -412,24 +387,21 @@ function FC:UpdateRail()
             row.sender = r.sender
             row.title:SetText(self:ShortName(r.sender))
             local snip = plain(r.msg or "")
-            
+            if #snip > 30 then snip = snip:sub(1, 27) .. "..." end
             row.sub:SetText(snip)
-            row.tooltipText = plain(r.msg or "")
         else
             row.sender = nil
-            row.tooltipText = nil
             row.title:SetText(i == 1 and "No whispers yet" or "")
             row.sub:SetText(i == 1 and "Recent conversations appear here" or "")
         end
     end
 
-    local lfg, lfgSeen = {}, {}
+    local lfg = {}
     for i = #self.db.history, 1, -1 do
         local r = self.db.history[i]
-        if r.isLFG and r.sender and not lfgSeen[r.sender] and time() - (r.t or 0) < 900 then
-            lfgSeen[r.sender] = true
+        if r.isLFG and r.sender then
             table.insert(lfg, r)
-            if #lfg >= 3 then break end
+            if #lfg >= 4 then break end
         end
     end
     for i, row in ipairs(self.lfgRows) do
@@ -441,12 +413,10 @@ function FC:UpdateRail()
             if r.lfg and r.lfg.role then meta = meta .. "  " .. r.lfg.role end
             row.title:SetText(meta)
             local snip = self:ShortName(r.sender) .. " - " .. plain(r.msg or "")
-            
+            if #snip > 34 then snip = snip:sub(1, 31) .. "..." end
             row.sub:SetText(snip)
-            row.tooltipText = plain(r.msg or "")
         else
             row.sender = nil
-            row.tooltipText = nil
             row.title:SetText(i == 1 and "LISTENING..." or "")
             row.sub:SetText(i == 1 and "LFG/LFM posts appear here" or "")
         end
@@ -480,296 +450,8 @@ function FC:ShowToast(r)
     end
 end
 
-function FC:GetAccent()
-    return themeAccents[(self.db and self.db.theme) or "GOLD"] or themeAccents.GOLD
-end
-
-function FC:RegisterAccentTexture(texture)
-    self.accentTextures = self.accentTextures or {}
-    table.insert(self.accentTextures, texture)
-    local c = self:GetAccent()
-    texture:SetColorTexture(c[1], c[2], c[3], c[4] or 1)
-    return texture
-end
-
-function FC:RegisterAccentFont(fontString)
-    self.accentFonts = self.accentFonts or {}
-    table.insert(self.accentFonts, fontString)
-    local c = self:GetAccent()
-    fontString:SetTextColor(c[1], c[2], c[3], c[4] or 1)
-    return fontString
-end
-
-function FC:ApplyTheme()
-    local c = self:GetAccent()
-    for _, t in ipairs(self.accentTextures or {}) do
-        if t and t.SetColorTexture then t:SetColorTexture(c[1], c[2], c[3], c[4] or 1) end
-    end
-    for _, f in ipairs(self.accentFonts or {}) do
-        if f and f.SetTextColor then f:SetTextColor(c[1], c[2], c[3], c[4] or 1) end
-    end
-    self:UpdateTabs()
-end
-
-function FC:ApplyAppearance()
-    if not self.db then return end
-    if self.frame then
-        self:FitScale()
-        if self.backdrop then self.backdrop:SetAlpha(self.db.opacity or 1) end
-    end
-    if self.messages then
-        self.messages:SetFont(STANDARD_TEXT_FONT, self.db.fontSize or 13, "")
-        self.messages:SetSpacing(self.db.messageSpacing or 3)
-    end
-    if self.rail then
-        if self.db.compact or self.db.showRail == false then self.rail:Hide() else self.rail:Show() end
-    end
-    self:LayoutMessages()
-    self:ApplyTheme()
-    self:Render(true)
-end
-
-function FC:Tooltip(owner, title, body)
-    if not GameTooltip then return end
-    GameTooltip:SetOwner(owner, "ANCHOR_TOP")
-    GameTooltip:SetText(title or "ForeverChat", 1, 1, 1)
-    if body and body ~= "" then GameTooltip:AddLine(body, 0.72, 0.76, 0.82, true) end
-    GameTooltip:Show()
-end
-
-function FC:MakeButton(parent, label, width, height, onClick)
-    local b = CreateFrame("Button", nil, parent)
-    b:SetSize(width or 90, height or 26)
-    b.bg = solid(b, "BACKGROUND", colors.panel2)
-    b.bg:SetAllPoints()
-    border(b)
-    b.label = text(b, 9, colors.text, "OUTLINE")
-    b.label:SetPoint("CENTER")
-    b.label:SetText(label or "BUTTON")
-    b:SetScript("OnEnter", function(self)
-        local c = FC:GetAccent()
-        self.bg:SetColorTexture(c[1] * 0.20, c[2] * 0.20, c[3] * 0.20, 1)
-    end)
-    b:SetScript("OnLeave", function(self) self.bg:SetColorTexture(colors.panel2[1], colors.panel2[2], colors.panel2[3], colors.panel2[4]) end)
-    if onClick then b:SetScript("OnClick", onClick) end
-    return b
-end
-
-function FC:BuildSettingToggle(parent, y, label, description, key, callback)
-    local row = CreateFrame("Button", nil, parent)
-    row:SetPoint("TOPLEFT", 0, y)
-    row:SetPoint("TOPRIGHT", 0, y)
-    row:SetHeight(52)
-    local rbg = solid(row, "BACKGROUND", {0.055,0.066,0.078,0.72})
-    rbg:SetAllPoints()
-    local title = text(row, 11, colors.text)
-    title:SetPoint("TOPLEFT", 12, -9)
-    title:SetText(label)
-    local desc = text(row, 8, colors.muted)
-    desc:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-    desc:SetWidth(326)
-    desc:SetHeight(24)
-    desc:SetJustifyV("TOP")
-    desc:SetText(description or "")
-    local state = text(row, 9, colors.muted, "OUTLINE")
-    state:SetPoint("RIGHT", -13, 0)
-    local pill = solid(row, "ARTWORK", colors.border)
-    pill:SetSize(42, 20)
-    pill:SetPoint("RIGHT", -9, 0)
-    state:SetParent(row)
-    state:ClearAllPoints()
-    state:SetPoint("CENTER", pill, "CENTER", 0, 0)
-    local function refresh()
-        local on = FC.db[key] ~= false
-        local c = FC:GetAccent()
-        if on then
-            pill:SetColorTexture(c[1] * 0.45, c[2] * 0.45, c[3] * 0.45, 1)
-            state:SetText("ON")
-            state:SetTextColor(1,1,1,1)
-        else
-            pill:SetColorTexture(0.12,0.13,0.15,1)
-            state:SetText("OFF")
-            state:SetTextColor(colors.muted[1],colors.muted[2],colors.muted[3],1)
-        end
-    end
-    row:SetScript("OnShow", refresh)
-    row:SetScript("OnClick", function()
-        FC.db[key] = not (FC.db[key] ~= false)
-        refresh()
-        if callback then callback() end
-    end)
-    row:SetScript("OnEnter", function() rbg:SetColorTexture(0.075,0.087,0.10,0.95) end)
-    row:SetScript("OnLeave", function() rbg:SetColorTexture(0.055,0.066,0.078,0.72) end)
-    refresh()
-    return row
-end
-
-function FC:BuildSettingStepper(parent, y, label, description, key, minValue, maxValue, step, formatter, callback)
-    local row = CreateFrame("Frame", nil, parent)
-    row:SetPoint("TOPLEFT", 0, y)
-    row:SetPoint("TOPRIGHT", 0, y)
-    row:SetHeight(58)
-    local rbg = solid(row, "BACKGROUND", {0.055,0.066,0.078,0.72})
-    rbg:SetAllPoints()
-    local title = text(row, 11, colors.text)
-    title:SetPoint("TOPLEFT", 12, -9)
-    title:SetText(label)
-    local desc = text(row, 8, colors.muted)
-    desc:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-    desc:SetWidth(286)
-    desc:SetHeight(24)
-    desc:SetJustifyV("TOP")
-    desc:SetText(description or "")
-    local value = text(row, 10, colors.text, "OUTLINE")
-    value:SetWidth(54)
-    value:SetJustifyH("CENTER")
-    value:SetPoint("RIGHT", -42, 0)
-    local minus = FC:MakeButton(row, "-", 28, 26)
-    minus:SetPoint("RIGHT", value, "LEFT", -3, 0)
-    local plus = FC:MakeButton(row, "+", 28, 26)
-    plus:SetPoint("LEFT", value, "RIGHT", 3, 0)
-    local function refresh()
-        local v = tonumber(FC.db[key]) or minValue
-        value:SetText(formatter and formatter(v) or tostring(v))
-    end
-    row:SetScript("OnShow", refresh)
-    minus:SetScript("OnClick", function()
-        local v = math.max(minValue, (tonumber(FC.db[key]) or minValue) - step)
-        FC.db[key] = math.floor(v * 100 + 0.5) / 100
-        refresh()
-        if callback then callback() end
-    end)
-    plus:SetScript("OnClick", function()
-        local v = math.min(maxValue, (tonumber(FC.db[key]) or minValue) + step)
-        FC.db[key] = math.floor(v * 100 + 0.5) / 100
-        refresh()
-        if callback then callback() end
-    end)
-    refresh()
-    return row
-end
-
-function FC:BuildSettings(parent)
-    local panel = CreateFrame("Frame", nil, parent)
-    self.settingsPanel = panel
-    panel:SetPoint("TOPLEFT", 1, -90)
-    panel:SetPoint("BOTTOMRIGHT", -1, 1)
-    local pbg = solid(panel, "BACKGROUND", colors.bg)
-    pbg:SetAllPoints()
-
-    local title = text(panel, 18, colors.text, "OUTLINE")
-    title:SetPoint("TOPLEFT", 20, -18)
-    title:SetText("SETTINGS")
-    local subtitle = text(panel, 9, colors.muted)
-    subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
-    subtitle:SetText("Tune ForeverChat without slash commands. Changes apply instantly.")
-
-    local close = self:MakeButton(panel, "BACK TO CHAT", 112, 28, function() FC:ToggleSettings(false) end)
-    close:SetPoint("TOPRIGHT", -18, -16)
-
-    local left = CreateFrame("Frame", nil, panel)
-    left:SetPoint("TOPLEFT", 20, -72)
-    left:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 20, 18)
-    left:SetWidth(440)
-    local right = CreateFrame("Frame", nil, panel)
-    right:SetPoint("TOPRIGHT", -20, -72)
-    right:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -20, 18)
-    right:SetWidth(440)
-
-    local a = self:RegisterAccentFont(text(left, 10, colors.gold, "OUTLINE"))
-    a:SetPoint("TOPLEFT", 0, 0)
-    a:SetText("APPEARANCE")
-    self:BuildSettingStepper(left, -24, "UI scale", "Scale the complete ForeverChat interface.", "scale", 0.75, 1.35, 0.05, function(v) return string.format("%.2fx", v) end, function() FC:ApplyAppearance() end)
-    self:BuildSettingStepper(left, -86, "Message font", "Adjust chat readability without scaling the HUD.", "fontSize", 10, 18, 1, function(v) return tostring(v) .. " px" end, function() FC:ApplyAppearance() end)
-    self:BuildSettingStepper(left, -148, "Line spacing", "More air between messages or a denser chat log.", "messageSpacing", 0, 8, 1, function(v) return tostring(v) .. " px" end, function() FC:ApplyAppearance() end)
-    self:BuildSettingStepper(left, -210, "Opacity", "Change background opacity; text remains fully readable.", "opacity", 0.65, 1.0, 0.05, function(v) return tostring(math.floor(v * 100 + 0.5)) .. "%" end, function() FC:ApplyAppearance() end)
-
-    local themeLabel = text(left, 11, colors.text)
-    themeLabel:SetPoint("TOPLEFT", 12, -286)
-    themeLabel:SetText("Accent theme")
-    local themeDesc = text(left, 8, colors.muted)
-    themeDesc:SetPoint("TOPLEFT", themeLabel, "BOTTOMLEFT", 0, -4)
-    themeDesc:SetText("Choose the visual signature of your Forever HUD.")
-    self.themeButtons = {}
-    local bx = 12
-    for _, theme in ipairs(themeOrder) do
-        local b = self:MakeButton(left, theme, 86, 28, function()
-            FC.db.theme = theme
-            FC:ApplyAppearance()
-            FC:RefreshThemeButtons()
-        end)
-        b:SetPoint("TOPLEFT", bx, -330)
-        bx = bx + 98
-        self.themeButtons[theme] = b
-    end
-
-    local c = self:RegisterAccentFont(text(right, 10, colors.gold, "OUTLINE"))
-    c:SetPoint("TOPLEFT", 0, 0)
-    c:SetText("CHAT & HARDCORE")
-    self:BuildSettingToggle(right, -24, "Timestamps", "Show a compact HH:MM time before each message.", "timestamps", function() FC:Render(true) end)
-    self:BuildSettingToggle(right, -80, "Right-side intelligence rail", "Inbox, LFG Radar and quick danger reporting.", "showRail", function() FC:ApplyAppearance() end)
-    self:BuildSettingToggle(right, -136, "Mention alerts", "Show a top-screen toast when someone writes your character name.", "mentionAlerts")
-    self:BuildSettingToggle(right, -192, "Hardcore danger alerts", "Show Forever Network danger reports as prominent toasts.", "dangerAlerts")
-    self:BuildSettingToggle(right, -248, "Automatic danger detection", "Flag chat containing danger, elite, patrol and Hardcore warning terms.", "autoDanger")
-    self:BuildSettingToggle(right, -304, "Duplicate spam filter", "Suppress repeated identical posts from the same player for a few seconds.", "duplicateFilter")
-
-    local reset = self:MakeButton(right, "RESET VISUALS", 132, 30, function()
-        FC.db.scale = 1.0
-        FC.db.fontSize = 13
-        FC.db.messageSpacing = 3
-        FC.db.opacity = 1.0
-        FC.db.theme = "GOLD"
-        FC.db.showRail = true
-        FC.db.compact = false
-        FC:ApplyAppearance()
-        FC:ToggleSettings(false)
-        FC:Print("Visual settings reset.")
-    end)
-    reset:SetPoint("BOTTOMRIGHT", -2, 4)
-
-    local foot = text(right, 8, colors.muted)
-    foot:SetPoint("BOTTOMLEFT", 0, 10)
-    foot:SetText("ForeverChat 0.3  /  by 0xgle")
-    panel:Hide()
-end
-
-function FC:RefreshThemeButtons()
-    if not self.themeButtons then return end
-    for theme, b in pairs(self.themeButtons) do
-        if b and b.label then
-            if theme == self.db.theme then
-                local c = self:GetAccent()
-                b.label:SetTextColor(c[1], c[2], c[3], 1)
-            else
-                b.label:SetTextColor(colors.muted[1], colors.muted[2], colors.muted[3], 1)
-            end
-        end
-    end
-end
-
-function FC:ToggleSettings(force)
-    if not self.settingsPanel then return end
-    if self.copyPanel then self.copyPanel:Hide() end
-    if self.search then self.search:ClearFocus() end
-    local show = force
-    if show == nil then show = not self.settingsPanel:IsShown() end
-    if show then
-        self.body:Hide()
-        self.bottom:Hide()
-        self.tabsBar:Hide()
-        self.settingsPanel:Show()
-        self:RefreshThemeButtons()
-    else
-        self.settingsPanel:Hide()
-        self.tabsBar:Show()
-        self.body:Show()
-        self.bottom:Show()
-        self:Render(true)
-    end
-end
-
 function FC:Show()
-    if self.frame then self.frame:Show() self.db.shown = true self.unread[self.currentTab] = 0 self:Render(true) self:UpdateRail() end
+    if self.frame then self.frame:Show() self.db.shown = true self:Render(true) end
 end
 
 function FC:Hide()
@@ -807,7 +489,7 @@ function FC:HandleChat(event, ...)
     self:AddRecord({
         event = event, label = labels[event] or "CHAT", msg = msg, sender = sender, channel = channel,
         channelNumber = channelNumber, flags = flags, lineID = lineID, guid = guid,
-        isLFG = isLFG, lfg = lfg, isTrade = self:IsTrade(msg, channel), isDanger = (self.db.autoDanger ~= false and self:IsDanger(msg)) or false,
+        isLFG = isLFG, lfg = lfg, isTrade = self:IsTrade(msg, channel), isDanger = self:IsDanger(msg),
         isWhisper = isWhisper, isGroup = isGroup, isGuild = isGuild, isMention = isMention,
     })
 end
@@ -830,9 +512,6 @@ function FC:NetworkSend(payload, channel)
 end
 
 function FC:BroadcastHello()
-    local now = GetTime()
-    if self.lastHello and now - self.lastHello < 30 then return end
-    self.lastHello = now
     local payload = "HELLO:" .. self.version
     if IsInGuild and IsInGuild() then self:NetworkSend(payload, "GUILD") end
     if IsInRaid and IsInRaid() then
@@ -876,6 +555,7 @@ function FC:HandleAddonMessage(prefix, payload, channel, sender)
 end
 
 function FC:OnEvent(event, ...)
+    if event == "PLAYER_LOGOUT" then if not self.db.saveHistory then self.db.history = {} end return end
     if event == "CHAT_MSG_ADDON" then
         self:HandleAddonMessage(...)
         return
@@ -890,28 +570,13 @@ end
 function FC:Initialize()
     if self.initialized then return true end
     ForeverChatDB = ForeverChatDB or {}
-    local oldSchema = tonumber(ForeverChatDB.schemaVersion or 1) or 1
     copyDefaults(defaults, ForeverChatDB)
     self.db = ForeverChatDB
-    if oldSchema < 2 then
-        if tonumber(self.db.width) == 900 then self.db.width = 1000 end
-        if tonumber(self.db.height) == 470 then self.db.height = 650 end
-        self.db.schemaVersion = 3
-    end
-    if oldSchema < 3 then
-        self.db.width, self.db.height = 1000, 650
-        self.db.schemaVersion = 3
-    end
-    self.db.width, self.db.height = 1000, 650
-    self.db.scale = math.max(0.75, math.min(1.35, tonumber(self.db.scale) or 1))
-    self.db.fontSize = math.max(10, math.min(18, tonumber(self.db.fontSize) or 13))
-    self.db.opacity = math.max(0.65, math.min(1, tonumber(self.db.opacity) or 1))
-    self.db.messageSpacing = math.max(0, math.min(8, tonumber(self.db.messageSpacing) or 3))
     if type(self.db.history) ~= "table" then self.db.history = {} end
     if type(self.db.blockedWords) ~= "table" then self.db.blockedWords = {} end
-    while #self.db.history > self.historyLimit do table.remove(self.db.history, 1) end
     for _, tab in ipairs(tabs) do self.unread[tab] = 0 end
 
+    self:UpgradeDatabase()
     self:RegisterNetwork()
     if not self:SafeCall("BuildUI", function() self:BuildUI() end) then return false end
 
@@ -921,15 +586,15 @@ function FC:Initialize()
         "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER", "CHAT_MSG_RAID_WARNING",
         "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER",
         "CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM", "CHAT_MSG_CHANNEL", "CHAT_MSG_SYSTEM",
-        "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "GUILD_ROSTER_UPDATE",
+        "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "GUILD_ROSTER_UPDATE", "PLAYER_LOGOUT",
     }
     for _, event in ipairs(events) do self:SafeRegister(event) end
 
     self.initialized = true
+    self:StartMaintenance()
     if self.db.shown then self.frame:Show() else self.frame:Hide() end
-    self:AddRecord({ label="FOREVER", msg="ForeverChat 0.3 loaded. Welcome to the Sanctum. /fc settings for appearance.", isSystem=true })
-    self:Print("0.3 loaded. Type |cffffffff/fc|r to toggle or |cffffffff/fc settings|r.")
-    self:RegisterWithCore()
+    self:AddRecord({ label="FOREVER", msg="ForeverChat 0.2.0: communication, LFG radar and alerts ready.", isSystem=true })
+    self:Print("0.2.0 loaded. Type |cffffffff/fc|r to toggle.")
     self:BroadcastHello()
     return true
 end
@@ -942,10 +607,8 @@ function FC:HandleSlash(input)
     if cmd == "" then
         self:Toggle()
     elseif cmd == "help" then
-        self:Print("/fc - toggle | /fc settings | /fc status | /fc danger <text> | /fc clear | /fc reset | /fc compact")
+        self:Print("/fc - toggle | /fc status | /fc danger <text> | /fc clear | /fc reset | /fc compact")
         self:Print("/fc block <word> | /fc unblock <word>")
-    elseif cmd == "settings" then
-        if self.initialized then self:Show() self:ToggleSettings(true) end
     elseif cmd == "status" then
         local build = GetBuildInfo and select(4, GetBuildInfo()) or "?"
         self:Print("version=" .. self.version .. " interface=" .. tostring(build) .. " initialized=" .. tostring(self.initialized))
@@ -961,18 +624,18 @@ function FC:HandleSlash(input)
         end
     elseif cmd == "reset" then
         if self.db and self.frame then
-            self.db.x, self.db.y, self.db.width, self.db.height, self.db.scale = 30, 80, 1000, 650, 1
+            self.db.x, self.db.y, self.db.width, self.db.height, self.db.scale = 30, 160, 900, 470, 1
             self.frame:ClearAllPoints()
-            self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 30, 80)
-            self.frame:SetSize(1000, 650)
-            self:FitScale()
+            self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 30, 160)
+            self.frame:SetSize(900, 470)
+            self.frame:SetScale(1)
             self:Show()
             self:Print("Layout reset.")
         end
     elseif cmd == "compact" then
         if self.rail then
             self.db.compact = not self.db.compact
-            self:ApplyAppearance()
+            if self.db.compact then self.rail:Hide() else self.rail:Show() end
             self:Print("Compact mode: " .. tostring(self.db.compact))
         end
     elseif cmd == "block" and rest ~= "" then
@@ -1002,7 +665,7 @@ FC.eventFrame:SetScript("OnEvent", function(_, event, ...)
         FC.eventFrame:UnregisterEvent("PLAYER_LOGIN")
         FC:SafeCall("Initialize", function() FC:Initialize() end)
     elseif FC.initialized then
-        local args, count = {...}, select("#", ...)
-        FC:SafeCall(event, function() FC:OnEvent(event, unpack(args, 1, count)) end)
+        local args = {n=select("#", ...), ...}
+        FC:SafeCall(event, function() FC:OnEvent(event, unpack(args, 1, args.n)) end)
     end
 end)

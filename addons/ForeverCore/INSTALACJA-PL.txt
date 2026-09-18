@@ -1,5 +1,5 @@
 FOREVERCORE — THE SANCTUM | by 0xgle
-Wersja 1.0.0-rc1 | Classic Era 1.15.9
+Wersja 1.0.3-rc4 | Classic Era 1.15.9
 
 INSTALACJA
 1. Zamknij WoW.
@@ -19,7 +19,7 @@ Sanctum: podgląd kolekcji i szybkie otwieranie addonów.
 Addons: wyszukiwanie, ulubione, włączanie i wyłączanie.
 Profiles: zapisywanie zestawów aktywnych addonów oraz import/eksport.
 Diagnostics: pamięć, raport, historia zmian, cofnięcie ostatniej operacji.
-Appearance: skala okna, przycisk minimapy, reset położenia.
+Appearance: skala okna, przycisk minimapy, wybór ikon addonów, reset położenia.
 
 ZMIANY ADDONÓW
 Kliknij Enabled/Disabled > Review > Apply changes > Reload UI.
@@ -34,7 +34,10 @@ KOMENDY
 /fc addons — lista addonów
 /fc profiles — profile
 /fc diag — diagnostyka
-/fc minimap — pokaż/ukryj przycisk minimapy
+/fc minimap — pokaż/ukryj przycisk ForeverCore
+/fc icons — otwórz manager ikon addonów przy minimapie
+/fc icons hide — domyślnie ukryj inne ikony
+/fc icons show — domyślnie pokaż inne ikony
 /fc reset — przywróć środek ekranu i skalę
 
 PRZED PUBLIKACJĄ

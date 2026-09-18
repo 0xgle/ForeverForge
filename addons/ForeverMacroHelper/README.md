@@ -1,60 +1,58 @@
 # ForeverMacroHelper
 
-**ForeverMacroHelper** is a Classic Era macro library and one-click macro installer for the Forever addon suite.
+Classic Era macro library for the Forever suite. Created by **0xgle**.
 
-Created by **0xgle**. © 2026 0xgle. All rights reserved.
+**0.2.0-beta1 · English UI and English spell names · Classic Era 1.15.9**
 
-## Version
+## Install
 
-0.1.0-beta — Classic Era 1.15.9
+1. Close WoW. Replace the old `ForeverMacroHelper` folder in `World of Warcraft/_classic_era_/Interface/AddOns/` with this folder.
+2. The final path must be `Interface/AddOns/ForeverMacroHelper/ForeverMacroHelper.toc`, without another nested folder.
+3. Start WoW, enable the addon in the character-selection AddOns menu, and type `/fmh`.
 
-## What is included
+Saved settings remain in WoW's WTF folder. Do not delete that folder. `INSTALL.bat` opens the usual AddOns directory; it is a folder helper, not an automatic installer.
 
-- 133 curated macros.
-- Every Classic class: Warrior, Paladin, Hunter, Rogue, Priest, Mage, Warlock, Druid and Shaman.
-- General macros shared across characters.
-- PvE, PvP and dual-purpose classification.
-- Role filters: Offense, Defense, Healing, CC, Utility, Pet and Targeting.
-- Search across titles, descriptions, tags and macro body.
-- Sort by name, role or PvE/PvP type.
-- Favorites.
-- Editable macro body before installation.
-- One-click Create / Update.
-- Recommended PvE, PvP and current-filter packs.
-- Per-character installation to avoid mixing class libraries.
-- Existing ForeverMacroHelper macros are updated instead of duplicated.
-- Macro character counter with the Classic 255-character limit.
-- Combat lockdown protection: macro creation/editing is disabled in combat.
-- Minimap launcher, movable window and UI scale controls.
-- `/fmh`, `/fmh pve`, `/fmh pvp`, `/fmh settings`, `/fmh reset`.
+The minimap launcher is off by default to keep the Forever suite uncluttered. Enable it in `/fmh settings`. Existing saved preferences are preserved.
 
-## Installation
+## Included
 
-Copy the `ForeverMacroHelper` folder into:
+- 214 templates covering General and all nine Classic classes, classified as PvE, PvP or Both.
+- New generated grimoire artwork and launcher icon, shared Forever control icons, obsidian panels, antique gold and turquoise accents.
+- Class and role filters, search, sorting, favorites, editable bodies and per-character saved drafts.
+- Create and update character macros. Click or drag the small book beside the editor to place an installed macro on your action bar.
+- Class starter packs with a preview, slot preflight and preservation of existing macros. Packs always use your actual character's class, regardless of the browsing filter.
+- Character-only macro lookup: account macros are never edited or deleted.
+- Exact-body legacy adoption; conflicting names or external edits are preserved and explained.
+- Delete confirmation, combat restrictions, byte counter, draggable window and automatic screen-fit scaling.
 
-`World of Warcraft/_classic_era_/Interface/AddOns/`
+## Using the library
 
-Restart WoW or reload the UI, then type `/fmh`.
+Select your class and a macro. Read its description and gold requirement note, edit if needed, then choose **Create macro**. Installed macros can be updated individually. Your draft is retained when you switch selection or reload.
 
-## Recommended workflow
+**Reset body** restores the curated template in the editor; it does not change the installed macro until you click Update. An external edit made in `/macro` is shown in the editor but is protected from addon overwrites. Rename that macro in `/macro` first if you want to create a fresh Forever version. Account macros with the same name remain separate.
 
-1. Open `/fmh`.
-2. Your current class is selected automatically.
-3. Choose PvE or PvP.
-4. Install individual macros, or use a Recommended Pack.
-5. Drag the newly created macros from the normal WoW Macro window to your bars.
+The full library does not occupy game macro slots. Only installed entries consume slots. The client supplies the slot limits; when missing, the addon uses conservative Classic defaults. Pack creation refuses to begin if the missing entries do not fit. A client-side error during creation is reported with the actual completed count.
 
-## Important Classic limitation
+## Commands
 
-World of Warcraft does not allow addons to create or edit macros while the player is in combat. ForeverMacroHelper disables installation buttons during combat and re-enables them afterwards.
+| Command | Action |
+| --- | --- |
+| `/fmh` or `/forevermacro` | Toggle the library |
+| `/fmh pve` | Open with PvE filter |
+| `/fmh pvp` | Open with PvP filter |
+| `/fmh settings` | Minimap, General templates, scale and position |
+| `/fmh reset` | Reset window position |
 
-The game also limits available macro slots, so the addon keeps the full library inside the addon and installs only the macros you actually want. Recommended class packs are intentionally kept compact.
+## Compatibility and scope
 
-## Beta test priorities
+The target is **Classic Era 1.15.9**, including use of appropriate templates on Hardcore characters. Hardcore resurrection rules still apply. Installing templates on a different project or non-English game client is disabled rather than silently installing incompatible spell names. The UI stays English. WoW: Forever compatibility needs a separate check against its actual client and API; this build does not claim it.
 
-- Confirm macro creation and update on Classic Era 1.15.9.
-- Confirm the question-mark macro icon is accepted on the current client build.
-- Validate every class macro on an appropriate character/talent setup.
-- Check UI at 0.8–1.25 scale and common resolutions.
-- Check that opening the addon during combat never causes blocked-action errors.
+This is a curated library, not an assertion that every possible macro combination exists. Some entries need learned spells, specific talents, forms, stances, reagents, weapons or pets. They do not choose rotations or react automatically. You activate the installed macro yourself. Macros remain subject to the global cooldown, range, line of sight and spell conditions. A stance transition may require another keypress. See Blizzard's [macro explanation](https://us.forums.blizzard.com/en/wow/t/macros-essential-information/21139).
 
+English spell names are intentional. Modifier variants require Shift bindings that do not intercept the macro key. Rank-specific templates do not automatically choose ranks. Powershifting, Life Tap and pet/area attacks deserve particular care on Hardcore.
+
+## Validation
+
+The included `Docs/AUDIT.md` records coverage, changes, sources and test limits. Lua was loaded and exercised in a mocked WoW environment, including the UI lifecycle and all 214 detail views. This does **not** replace in-game verification; no live game session was available. `Docs/TEST-IN-GAME.md` gives the short test pass.
+
+© 2026 0xgle. All rights reserved.

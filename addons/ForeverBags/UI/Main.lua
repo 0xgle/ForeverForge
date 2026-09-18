@@ -33,6 +33,13 @@ local function MakeButton(parent, w, h)
     return b
 end
 
+local function MakeToolbarButton(parent, w, h, kind)
+    local b = NewFrame("Button", nil, parent)
+    b:SetSize(w, h)
+    FB.Media:SkinToolbarButton(b, kind)
+    return b
+end
+
 local function AddText(button, text, font)
     local fs = button:CreateFontString(nil, "OVERLAY", font or "GameFontNormal")
     fs:SetPoint("CENTER"); fs:SetText(text or "")
@@ -83,34 +90,36 @@ function FB:BuildMainFrame()
     credit:SetWidth(58); credit:SetWordWrap(false); credit:SetJustifyH("LEFT")
     credit:SetTextColor(0.58,0.58,0.58)
 
-    local close = MakeButton(f, 34, 34); close:SetPoint("TOPRIGHT", -12, -12)
+    local close = MakeToolbarButton(f, 34, 34, "danger"); close:SetPoint("TOPRIGHT", -12, -12)
     local ct = close:CreateTexture(nil, "ARTWORK"); ct:SetSize(24,24); ct:SetPoint("CENTER"); ct:SetTexture(FB.Media:Icon("close"))
     close:SetScript("OnClick", function() f:Hide() end)
 
-    local settings = MakeButton(f, 34, 34); settings:SetPoint("RIGHT", close, "LEFT", -8, 0)
+    local settings = MakeToolbarButton(f, 34, 34); settings:SetPoint("RIGHT", close, "LEFT", -7, 0)
     local st = settings:CreateTexture(nil, "ARTWORK"); st:SetSize(26,26); st:SetPoint("CENTER"); st:SetTexture(FB.Media:Icon("settings"))
     settings:SetScript("OnClick", function() FB.SettingsUI:Toggle() end)
 
-    local sort = MakeButton(f, 126, 34); sort:SetPoint("RIGHT", settings, "LEFT", -10, 0)
+    local sort = MakeToolbarButton(f, 126, 34); sort:SetPoint("RIGHT", settings, "LEFT", -9, 0)
     local sortIcon = sort:CreateTexture(nil, "ARTWORK"); sortIcon:SetSize(24,24); sortIcon:SetPoint("LEFT", 5,0); sortIcon:SetTexture(FB.Media:Icon("sort_up"))
+    local sortSep = sort:CreateTexture(nil,"ARTWORK",nil,2); sortSep:SetWidth(1); sortSep:SetPoint("TOPLEFT",32,-7); sortSep:SetPoint("BOTTOMLEFT",32,7); sortSep:SetColorTexture(0.66,0.54,0.31,0.28)
     sort.text = sort:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); sort.text:SetPoint("LEFT", sortIcon, "RIGHT", 3,0); sort.text:SetPoint("RIGHT", -5,0); sort.text:SetJustifyH("LEFT")
     sort:SetScript("OnClick", function() FB.Data:CycleSort() end)
     self.sortButton = sort
 
     local search = NewFrame("EditBox", nil, f)
     search:SetSize(285, 34); search:SetPoint("RIGHT", sort, "LEFT", -10, 0)
-    search:SetAutoFocus(false); search:SetFontObject("GameFontHighlight"); search:SetTextInsets(34,10,0,0)
-    search:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8", edgeFile="Interface\\Buttons\\WHITE8x8", edgeSize=1})
-    search:SetBackdropColor(0.02,0.03,0.04,0.98); search:SetBackdropBorderColor(0.32,0.42,0.46,1)
-    local si = search:CreateTexture(nil,"ARTWORK"); si:SetSize(25,25); si:SetPoint("LEFT",5,0); si:SetTexture(FB.Media:Icon("search"))
-    search.placeholder = search:CreateFontString(nil,"OVERLAY","GameFontDisable"); search.placeholder:SetPoint("LEFT",34,0); search.placeholder:SetText(L.SEARCH)
+    search:SetAutoFocus(false); search:SetFontObject("GameFontHighlight"); search:SetTextInsets(38,10,0,0)
+    search:SetTextColor(0.90,0.88,0.79)
+    FB.Media:SkinToolbarField(search)
+    local si = search:CreateTexture(nil,"ARTWORK",nil,2); si:SetSize(24,24); si:SetPoint("LEFT",6,0); si:SetTexture(FB.Media:Icon("search"))
+    local searchSep = search:CreateTexture(nil,"ARTWORK",nil,2); searchSep:SetWidth(1); searchSep:SetPoint("TOPLEFT",34,-7); searchSep:SetPoint("BOTTOMLEFT",34,7); searchSep:SetColorTexture(0.66,0.54,0.31,0.28)
+    search.placeholder = search:CreateFontString(nil,"OVERLAY","GameFontDisable"); search.placeholder:SetPoint("LEFT",38,0); search.placeholder:SetText(L.SEARCH); search.placeholder:SetTextColor(0.56,0.62,0.61)
     search:SetScript("OnTextChanged", function(self)
         FB.searchText = self:GetText() or ""
         self.placeholder:SetShown(FB.searchText == "" and not self:HasFocus())
         FB:Debounce("search", 0.04, function() FB:Refresh() end)
     end)
-    search:SetScript("OnEditFocusGained", function(self) self.placeholder:Hide(); self:SetBackdropBorderColor(0.65,0.57,0.37,1) end)
-    search:SetScript("OnEditFocusLost", function(self) self.placeholder:SetShown((self:GetText() or "") == ""); self:SetBackdropBorderColor(0.32,0.42,0.46,1) end)
+    search:SetScript("OnEditFocusGained", function(self) self.placeholder:Hide(); FB.Media:SetToolbarBackdrop(self, true, "field") end)
+    search:SetScript("OnEditFocusLost", function(self) self.placeholder:SetShown((self:GetText() or "") == ""); FB.Media:SetToolbarBackdrop(self, false, "field") end)
     search:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     search:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
     self.searchBox = search

@@ -1,8 +1,8 @@
-# Validation record — 1.0.0-rc1
+# Validation record — 1.0.3-rc4
 
 ## Automated checks
 
-21 scenarios passed under system Lua 5.4 with a finite mock of the WoW frame and
+24 scenarios passed under system Lua 5.4 with a finite mock of the WoW frame and
 addon APIs. Source code is written using Lua 5.1-compatible constructs. This
 run does not certify WoW API signatures or protected execution in the client.
 
@@ -12,7 +12,7 @@ and rollback; profile round-trip; invalid/code/duplicate/oversized import
 rejection; duplicate profile names; atomic profile conflicts; missing imported
 addons; slash launcher discovery; isolated callback failure; construction and
 refresh of all six UI pages; widget reuse; nested dialogs; report privacy;
-minimap/slash/scale operations; legacy enable-state argument order; search and
+minimap/slash/scale operations; per-addon minimap icon overrides; minimap icon manager widget reuse; legacy enable-state argument order; search and
 pagination hiding stale rows.
 
 The log deliberately includes injected errors to verify handling. They are not
@@ -27,6 +27,7 @@ combat taint or third-party addon behavior.
 
 - Cold login with only ForeverCore, then with ForeverBags and ForeverGather.
 - `/fc`, minimap left/right click, drag, Escape, logout/login position persistence.
+- With several addon launchers installed: verify default hiding, allow one icon, reset it to default, then test global show/hide.
 - Verify all textures load and no labels overlap at UI scales 0.65, 1.0 and 1.25.
 - Set and use a key binding via WoW's own Key Bindings panel.
 - Launch Bags, Bags Config and Gather; test any legacy slash launchers installed.

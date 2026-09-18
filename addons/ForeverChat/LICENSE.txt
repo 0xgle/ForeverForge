@@ -1,8 +1,7 @@
-ForeverChat
 Copyright (c) 2026 0xgle. All rights reserved.
-Wszelkie prawa zastrzeżone.
 
-Permission is granted to install and use this build for personal testing.
-Redistribution, commercial use and distribution of modified versions require
-permission from 0xgle, except as permitted by applicable law.
-Third-party trademarks belong to their respective owners.
+Permission is granted to install and use this distributed addon for personal gameplay and testing. No permission is granted to redistribute, sell, sublicense or publish modified versions of its code or bundled artwork without prior written permission from 0xgle.
+
+World of Warcraft and related names are trademarks of their respective owners. This addon is an independent project and is not endorsed by Blizzard Entertainment.
+
+The addon is supplied as-is, without warranty.

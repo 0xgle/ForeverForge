@@ -1,9 +1,9 @@
 # ForeverMarket
 
-**2.0.0-beta1 · by 0xgle · Classic Era 1.15.9 / Interface 11509**
+**2.1.0-beta1 · by 0xgle · Classic Era 1.15.9 / Interface 11509**
 
 An English-language Auction House and trading addon for the ForeverForge suite, with market
-search, inventory-first selling, shopping lists, local price history and a new **Trader Engine**.
+search, inventory-first selling, shopping lists, local price history, **Trader Engine**, **Flip Finder** and account-wide **Empire analytics**.
 Its workflow is inspired by Auctionator and TradeSkillMaster, with an original
 implementation. Neither addon is required. The goal is TSM-style power with a simpler workflow.
 
@@ -80,7 +80,10 @@ equipped gear are not scanned.
 - **My bids:** bidder-list tracking with WINNING / OUTBID states and normal confirmations before trading.
 - **Shopping Scan:** walks your shopping entries one at a time under the normal AH query throttle and stores current availability.
 - **Advisor:** descriptive opportunity signals from your own local observations; it does not promise profit or predict future prices.
-- **Ledger:** remembers purchases, posting/cancellation actions and SOLD rows observed in My Auctions, with daily / weekly / all-time summaries.
+- **Flip Finder:** analyzes loaded auctions or a watched-item scan using net profit after AH cut, ROI, local price history, sample confidence and the next competing price. Every candidate is refreshed before purchase.
+- **Tracked flip accounting:** purchases reviewed through Flip Finder are tagged and matched to later SOLD rows using average cost basis, producing realized flip P/L without treating every AH purchase as a flip.
+- **Empire Ledger:** account-wide latest-gold snapshots, 14-day Net Sales / Realized Flip Profit charts and per-character gold/sales/profit rows. Open each character once to seed and refresh its gold snapshot.
+- **Ledger:** remembers purchases, posting/cancellation actions and SOLD rows observed in My Auctions, with realm activity plus account-wide Empire views.
 - **Inventory memory:** bag, bank and mailbox snapshots are remembered per character when those locations are visited.
 - **Crafting Profit:** captures an opened profession, estimates reagent cost / market value / craftable quantity and can add missing reagents to Shopping.
 
@@ -128,7 +131,7 @@ and faction, not by auctioneer. Avoid mixing neutral and faction scans if you
 need separate valuations.
 
 Shopping quantities and Trader plans are recommendations, not unattended automation.
-ForeverMarket 2.0 includes Groups, Auctioning Operations, local price expressions,
+ForeverMarket 2.1 includes Groups, Auctioning Operations, local price expressions,
 crafting estimates, inventory snapshots and a lightweight ledger, but it does not
 perform background trading, automated mail collection, automatic reposting or desktop-app synchronization.
 Every transaction still requires a user click and confirmation. The server may still reject
@@ -136,7 +139,7 @@ an auction that disappears between confirmation and processing.
 
 ## Verification
 
-The current 92-assertion simulated Classic Era API suite passes with the English interface.
+The current 102-assertion simulated Classic Era API suite passes with the English interface.
 It covers loading, every panel, switching interfaces, stale offers, query limits,
 unit/stack pricing, confirmations, data migration and inventory-first selling.
 Frame-model renders were reviewed for layout. These checks are not live WoW tests.

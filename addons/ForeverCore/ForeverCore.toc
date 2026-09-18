@@ -2,7 +2,7 @@
 ## Title: ForeverCore | The Sanctum
 ## Notes: Your Forever addon command center. Profiles, launcher and diagnostics. By 0xgle.
 ## Author: 0xgle
-## Version: 1.0.1-rc2
+## Version: 1.0.3-rc4
 ## SavedVariables: ForeverCoreDB
 ## SavedVariablesPerCharacter: ForeverCoreCharDB
 ## IconTexture: Interface\AddOns\ForeverCore\Media\Core.tga

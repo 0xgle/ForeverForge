@@ -74,22 +74,75 @@ function API:GetQuestInfo(bag, slot)
 end
 
 function API:GetItemStatic(itemID, link)
-    local query = link or itemID
-    local name, itemLink, quality, itemLevel, minLevel, itemType, itemSubType, stackCount, equipLoc, texture, sellPrice, classID, subClassID, bindType, expacID, setID, isCraftingReagent = GetItemInfo(query)
-    if not name and GetItemInfoInstant then
-        local iid, iType, iSubType, iEquipLoc, icon, iClassID, iSubClassID = GetItemInfoInstant(query)
+    -- WoW Forever (12.x) uses the C_Item namespace.
+    -- Always prefer the numeric itemID: Forever can expose a short display link
+    -- such as "[Hearthstone]", which is not a reliable GetItemInfo query.
+    local query = itemID or link
+
+    if not query or not C_Item then
         return {
-            itemID = iid or itemID, name = nil, link = link, quality = nil, itemLevel = nil,
-            itemType = iType, itemSubType = iSubType, equipLoc = iEquipLoc, icon = icon,
-            sellPrice = 0, classID = iClassID, subClassID = iSubClassID, crafting = false,
+            itemID = itemID, link = link, sellPrice = 0, crafting = false,
         }
     end
+
+    local name, itemLink, quality, itemLevel, minLevel, itemType, itemSubType,
+          stackCount, equipLoc, texture, sellPrice, classID, subClassID, bindType,
+          expacID, setID, isCraftingReagent
+
+    if C_Item.GetItemInfo then
+        name, itemLink, quality, itemLevel, minLevel, itemType, itemSubType,
+        stackCount, equipLoc, texture, sellPrice, classID, subClassID, bindType,
+        expacID, setID, isCraftingReagent = C_Item.GetItemInfo(query)
+    end
+
+    -- GetItemInfo can legitimately return nil while the full item record is not
+    -- cached yet. Instant info is local and gives us enough data to render and
+    -- categorise the slot without breaking the whole bag refresh.
+    if not name and C_Item.GetItemInfoInstant then
+        local iid, iType, iSubType, iEquipLoc, icon, iClassID, iSubClassID =
+            C_Item.GetItemInfoInstant(query)
+
+        return {
+            itemID = iid or itemID,
+            name = nil,
+            link = link,
+            quality = quality,
+            itemLevel = itemLevel,
+            minLevel = minLevel,
+            itemType = iType or itemType,
+            itemSubType = iSubType or itemSubType,
+            stackCount = stackCount,
+            equipLoc = iEquipLoc or equipLoc,
+            icon = icon or texture,
+            sellPrice = sellPrice or 0,
+            classID = iClassID or classID,
+            subClassID = iSubClassID or subClassID,
+            bindType = bindType,
+            expacID = expacID,
+            setID = setID,
+            crafting = isCraftingReagent or false,
+        }
+    end
+
     return {
-        itemID = itemID, name = name, link = itemLink or link, quality = quality, itemLevel = itemLevel,
-        minLevel = minLevel, itemType = itemType, itemSubType = itemSubType, stackCount = stackCount,
-        equipLoc = equipLoc, icon = texture, sellPrice = sellPrice or 0, classID = classID,
-        subClassID = subClassID, bindType = bindType, expacID = expacID, setID = setID,
-        crafting = isCraftingReagent,
+        itemID = itemID,
+        name = name,
+        link = itemLink or link,
+        quality = quality,
+        itemLevel = itemLevel,
+        minLevel = minLevel,
+        itemType = itemType,
+        itemSubType = itemSubType,
+        stackCount = stackCount,
+        equipLoc = equipLoc,
+        icon = texture,
+        sellPrice = sellPrice or 0,
+        classID = classID,
+        subClassID = subClassID,
+        bindType = bindType,
+        expacID = expacID,
+        setID = setID,
+        crafting = isCraftingReagent or false,
     }
 end
 

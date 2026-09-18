@@ -1,8 +1,8 @@
 ## Interface: 11509
 ## Title: |cffd4ad6bForeverMarket|r
-## Notes: ForeverForge Trader Engine: market, groups, operations, scans, ledger and local price intelligence.
+## Notes: ForeverForge Flip & Empire Engine: market, trader operations, flip finder, account analytics and local price intelligence.
 ## Author: 0xgle
-## Version: 2.0.0-beta1
+## Version: 2.2.1-beta1
 ## SavedVariables: ForeverMarketDB
 ## OptionalDeps: ForeverCore
 ## X-Forever-Suite: 1
@@ -17,6 +17,8 @@ Market.lua
 Sell.lua
 Inventory.lua
 Ledger.lua
+Flip.lua
+Empire.lua
 Trader.lua
 ShoppingScan.lua
 Advisor.lua
@@ -24,5 +26,7 @@ Crafting.lua
 UI.lua
 UIViews.lua
 UITrader.lua
+UIFlips.lua
+UIEmpire.lua
 UICrafting.lua
 Native.lua

@@ -1,7 +1,7 @@
 local _,FM=...
 local T,M=FM.T,FM.Market
 local U={offset=0,sort="unit",ascending=true,activeTab="Market"};FM.UI=U
-local tabs={{"Market","Market","search"},{"Deals","Deals","coins"},{"Sell","Sell","sell"},{"Owned","My auctions","bank"},{"Bids","My bids","coins"},{"Shopping","Shopping","favorite"},{"Trader","Trader Engine","trade"},{"Advisor","Advisor","discovery"},{"Ledger","Ledger","bank"},{"History","History","discovery"},{"Settings","Settings","settings"}}
+local tabs={{"Market","Market","search"},{"Deals","Deals","coins"},{"Sell","Sell","sell"},{"Owned","My auctions","bank"},{"Bids","My bids","coins"},{"Shopping","Shopping","favorite"},{"Flips","Flip Finder","coins"},{"Trader","Trader Engine","trade"},{"Advisor","Advisor","discovery"},{"Ledger","Ledger","bank"},{"History","History","discovery"},{"Settings","Settings","settings"}}
 function U:ApplyPosition()
     if not self.frame then return end
     local scale=math.min(FM.DB.settings.scale or 1,(UIParent:GetWidth()-24)/1160,(UIParent:GetHeight()-24)/760)
@@ -25,20 +25,20 @@ function U:Build()
     self.connection=T:Text(f,"",10,845,60,242,T.teal);self.connection:SetJustifyH("RIGHT")
     self.nav={}
     for i,v in ipairs(tabs) do
-        local name=v[1];local b=T:Button(f,v[2],178,29,24,100+(i-1)*33,function() U:SetTab(name) end)
+        local name=v[1];local b=T:Button(f,v[2],178,27,24,100+(i-1)*30,function() U:SetTab(name) end)
         b.label:ClearAllPoints();b.label:SetPoint("LEFT",38,0);b.label:SetWidth(131);b.label:SetJustifyH("LEFT")
         T:Icon(b,v[3],20,9,4);self.nav[name]=b
     end
-    local note=T:Panel(f,178,142,24,480)
+    local note=T:Panel(f,178,142,24,470)
     T:Text(note,"LOCAL MARKET",10,13,14,155,T.gold)
     self.realm=T:Text(note,FM.realmKey,11,13,36,153,T.muted);self.realm:SetWordWrap(true);self.realm:SetHeight(34)
     self.sideStats=T:Text(note,"",11,13,79,153,T.text);self.sideStats:SetWordWrap(true);self.sideStats:SetHeight(54)
-    T:Button(f,"Scan market",178,32,24,638,function() M:FullScan() end,true)
-    T:Button(f,"Blizzard",178,28,24,678,function() FM.Native:SwitchToBlizzard() end)
+    T:Button(f,"Scan market",178,32,24,626,function() M:FullScan() end,true)
+    T:Button(f,"Blizzard",178,28,24,664,function() FM.Native:SwitchToBlizzard() end)
     T:Text(f,"by 0xgle  /  "..FM.version,10,26,724,250,T.muted)
     self.status=T:Text(f,"Ready",11,260,726,870,T.muted)
     self.body=CreateFrame("Frame",nil,f);self.body:SetSize(916,604);self.body:SetPoint("TOPLEFT",220,-110)
-    self.panels={};self:BuildMarket();self:BuildBids();self:BuildSell();self:BuildShopping();self:BuildTrader();self:BuildAdvisor();self:BuildLedger();self:BuildHistory();self:BuildSettings();self:BuildConfirm()
+    self.panels={};self:BuildMarket();self:BuildBids();self:BuildSell();self:BuildShopping();self:BuildFlips();self:BuildTrader();self:BuildAdvisor();self:BuildLedger();self:BuildHistory();self:BuildSettings();self:BuildConfirm()
     f:SetScript("OnHide",function()
         U:DismissConfirm()
         if not U.suppressClose and M.open and FM.Native.saved then
@@ -74,22 +74,74 @@ end
 function U:BuildMarket()
     local p=self:NewPanel("Market"," ");self.marketTitle=T:Text(p,"Market",20,0,0,600,T.gold)
     self.search=T:Edit(p,398,32,0,36,"")
-    local function search() U.search:ClearFocus();M:Search(U.search:GetText(),0,U.exact) end
+    U.browseClass=nil;U.browseSub=nil;U.browseQuality=nil;U.browseUsable=false
+    local function num(e) local v=tonumber(e and e:GetText() or "");return v and math.max(0,math.floor(v)) or nil end
+    local function filters() return {classID=U.browseClass,subClassID=U.browseSub,minLevel=num(U.minLevel),maxLevel=num(U.maxLevel),quality=U.browseQuality,usable=U.browseUsable} end
+    local function search() U.search:ClearFocus();M:Search(U.search:GetText(),0,U.exact,filters()) end
+    U.marketSearch=search
     self.search:SetScript("OnEnterPressed",search)
     T:Button(p,"Search",96,32,406,36,search,true)
     self.exactButton=T:Button(p,"Exact name: NO",180,32,510,36,function(b) U.exact=not U.exact;b.label:SetText("Exact name: "..(U.exact and "YES" or "NO")) end)
     T:Button(p,"Stop",74,32,698,36,function() M:Stop();FM:Status("Stopped. Search again to resume trading.");FM:Refresh() end)
     self.refreshOwned=T:Button(p,"Refresh",112,32,780,36,function() if U.activeTab=="Owned" then M:RefreshOwned() else search() end end)
-    self.filter=T:Edit(p,262,28,0,80,"");T:Tip(self.filter,"Filter loaded results","Enter part of an item name. Filters the loaded page without a new server query.")
+
+    local function drop(label,w,x,y,getItems,onPick)
+        local b=T:Button(p,label,w,28,x,y,function(btn)
+            if btn.menu and btn.menu:IsShown() then btn.menu:Hide();return end
+            if U.openBrowseMenu and U.openBrowseMenu~=btn.menu then U.openBrowseMenu:Hide() end
+            local items=getItems();local h=math.min(320,8+#items*24)
+            local m=btn.menu or T:Panel(p,w,h,x,y+30);btn.menu=m;m:SetFrameStrata("DIALOG");m:SetFrameLevel(p:GetFrameLevel()+20)
+            for _,c in ipairs(m.children or {}) do c:Hide() end;m.children={};m:SetHeight(h)
+            for i,it in ipairs(items) do
+                if i>13 then break end
+                local r=T:Button(m,it.label,w-8,22,4,4+(i-1)*24,function() onPick(it);m:Hide() end)
+                r.label:SetJustifyH("LEFT");m.children[#m.children+1]=r
+            end
+            m:Show();U.openBrowseMenu=m
+        end)
+        return b
+    end
+    local function classItems()
+        local a={{label="All categories",id=nil}}
+        for id=0,20 do local n=GetItemClassInfo and GetItemClassInfo(id);if n and n~="" then a[#a+1]={label=n,id=id} end end
+        return a
+    end
+    local function subItems()
+        local a={{label="All subcategories",id=nil}};if U.browseClass==nil then return a end
+        for id=0,40 do local n=GetItemSubClassInfo and GetItemSubClassInfo(U.browseClass,id);if n and n~="" then a[#a+1]={label=n,id=id} end end
+        return a
+    end
+    -- Browse controls are intentionally split into two clearly labelled rows.
+    -- The previous compact 2-row layout was functional, but visually dense at common UI scales.
+    T:Text(p,"BROWSE AUCTION HOUSE",9,0,78,180,T.gold)
+    T:Text(p,"Category",9,0,94,120,T.muted)
+    T:Text(p,"Subcategory",9,198,94,120,T.muted)
+    T:Text(p,"Min level",9,396,94,68,T.muted)
+    T:Text(p,"Max level",9,472,94,68,T.muted)
+    T:Text(p,"Quality",9,548,94,120,T.muted)
+
+    self.classDrop=drop("All categories",190,0,108,classItems,function(it) U.browseClass=it.id;U.browseSub=nil;U.classDrop.label:SetText(it.label);U.subDrop.label:SetText("All subcategories") end)
+    self.subDrop=drop("All subcategories",190,198,108,subItems,function(it) U.browseSub=it.id;U.subDrop.label:SetText(it.label) end)
+    self.minLevel=T:Edit(p,68,28,396,108,"");self.minLevel:SetMaxLetters(3);T:Tip(self.minLevel,"Min level","Optional minimum item level for the Auction House query.")
+    self.maxLevel=T:Edit(p,68,28,472,108,"");self.maxLevel:SetMaxLetters(3);T:Tip(self.maxLevel,"Max level","Optional maximum item level for the Auction House query.")
+    local qualities={{label="Any quality",id=nil},{label="Poor",id=0},{label="Common",id=1},{label="Uncommon",id=2},{label="Rare",id=3},{label="Epic",id=4},{label="Legendary",id=5}}
+    self.qualityDrop=drop("Any quality",142,548,108,function() return qualities end,function(it) U.browseQuality=it.id;U.qualityDrop.label:SetText(it.label) end)
+    self.usableButton=T:Button(p,"Usable: NO",100,28,698,108,function(b) U.browseUsable=not U.browseUsable;b.label:SetText("Usable: "..(U.browseUsable and "YES" or "NO")) end)
+    T:Button(p,"Browse",86,28,806,108,function() U.search:SetText("");U.exact=false;U.exactButton.label:SetText("Exact name: NO");search() end,true)
+
+    T:Text(p,"LOCAL RESULT FILTERS",9,0,148,180,T.gold)
+    T:Text(p,"Name contains",9,0,164,120,T.muted)
+    T:Text(p,"Max / item",9,276,164,82,T.muted)
+    self.filter=T:Edit(p,262,28,0,178,"");T:Tip(self.filter,"Filter loaded results","Enter part of an item name. Filters the loaded page without a new server query.")
     self.filter:SetScript("OnTextChanged",function() U.offset=0;U:RefreshMarket() end)
-    T:Text(p,"Max / item",11,276,88,82,T.muted)
-    self.maxPrice=T:Edit(p,126,28,356,80,"");self.maxPrice:SetScript("OnTextChanged",function() U.offset=0;U:RefreshMarket() end)
-    self.onlyBuy=T:Button(p,"Buyout only: NO",154,28,490,80,function(b)
+    self.maxPrice=T:Edit(p,126,28,276,178,"");self.maxPrice:SetScript("OnTextChanged",function() U.offset=0;U:RefreshMarket() end)
+    self.onlyBuy=T:Button(p,"Buyout only: NO",154,28,414,178,function(b)
         if U.activeTab=="Owned" then U.ownerUndercutOnly=not U.ownerUndercutOnly else U.buyoutOnly=not U.buyoutOnly end
         U.offset=0;U:RefreshMarket()
     end)
-    self.filterHint=T:Text(p,"Shift-click: watch item",10,660,88,230,T.muted)
-    local head=T:Panel(p,892,24,0,120)
+    self.filterHint=T:Text(p,"Shift-click: watch item",10,590,186,250,T.muted)
+    local head=T:Panel(p,892,24,0,222)
+
     local cols={{"ITEM","name",8,264},{"QTY","count",280,44},{"UNIT PRICE","unit",330,112},{"STACK PRICE","buyout",450,112},{"MARKET %","deal",570,92},{"SELLER","owner",670,124}}
     self.marketHeaders={}
     for _,v in ipairs(cols) do
@@ -98,14 +150,14 @@ function U:BuildMarket()
     end
     self.rows={}
     for i=1,10 do
-        local r=CreateFrame("Button",nil,p,"BackdropTemplate");r:SetSize(892,35);r:SetPoint("TOPLEFT",0,-(148+(i-1)*36))
+        local r=CreateFrame("Button",nil,p,"BackdropTemplate");r:SetSize(892,31);r:SetPoint("TOPLEFT",0,-(250+(i-1)*32))
         r:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8X8"});r:SetBackdropColor(.025,.048,.056,i%2==0 and .95 or .7)
         r.icon=r:CreateTexture(nil,"ARTWORK");r.icon:SetSize(28,28);r.icon:SetPoint("LEFT",7,0);r.icon:SetTexCoord(.07,.93,.07,.93)
-        r.name=T:Text(r,"",12,44,10,222);r.qty=T:Text(r,"",11,280,10,45)
-        r.unit=T:Text(r,"",11,330,10,114);r.total=T:Text(r,"",11,450,10,114)
-        r.deal=T:Text(r,"",11,578,10,85,T.teal);r.owner=T:Text(r,"",11,670,10,125,T.muted)
-        r.buy=T:Button(r,"Buy",44,25,800,5,function() if r.data then if U.activeTab=="Owned" then M:Cancel(r.data) else M:Buy(r.data) end end end,true)
-        r.bid=T:Button(r,"Bid",40,25,848,5,function() if r.data then M:Buy(r.data,true) end end)
+        r.name=T:Text(r,"",12,44,8,222);r.qty=T:Text(r,"",11,280,8,45)
+        r.unit=T:Text(r,"",11,330,8,114);r.total=T:Text(r,"",11,450,8,114)
+        r.deal=T:Text(r,"",11,578,8,85,T.teal);r.owner=T:Text(r,"",11,670,8,125,T.muted)
+        r.buy=T:Button(r,"Buy",44,25,800,3,function() if r.data then if U.activeTab=="Owned" then M:Cancel(r.data) else M:Buy(r.data) end end end,true)
+        r.bid=T:Button(r,"Bid",40,25,848,3,function() if r.data then M:Buy(r.data,true) end end)
         r:SetScript("OnClick",function()
             if not r.data then return end
             U.selected=r.data
@@ -123,14 +175,14 @@ function U:BuildMarket()
         self.rows[i]=r
     end
     local scroll=CreateFrame("Slider",nil,p,"OptionsSliderTemplate")
-    scroll:SetOrientation("VERTICAL");scroll:SetSize(14,354);scroll:SetPoint("TOPLEFT",899,-150);scroll:SetMinMaxValues(0,0);scroll:SetValueStep(1);scroll:SetObeyStepOnDrag(true)
+    scroll:SetOrientation("VERTICAL");scroll:SetSize(14,314);scroll:SetPoint("TOPLEFT",899,-250);scroll:SetMinMaxValues(0,0);scroll:SetValueStep(1);scroll:SetObeyStepOnDrag(true)
     scroll:SetScript("OnValueChanged",function(_,v) U.offset=math.floor(v+.5);U:RefreshMarket() end);self.scroll=scroll
     p:EnableMouseWheel(true);p:SetScript("OnMouseWheel",function(_,d) U.scroll:SetValue(U.offset-d*3) end)
-    self.empty=T:Text(p,"",14,55,256,790,T.muted);self.empty:SetJustifyH("CENTER");self.empty:SetWordWrap(true);self.empty:SetHeight(100)
-    self.paging=T:Text(p,"",11,0,528,430,T.muted)
-    self.prev=T:Button(p,"< AH page",112,28,650,518,function() if U.activeTab~="Owned" then M:Search(M.query,M.page-1,M.exact) end end)
-    self.next=T:Button(p,"AH page >",122,28,770,518,function() if U.activeTab~="Owned" then M:Search(M.query,M.page+1,M.exact) end end)
-    local detail=T:Panel(p,892,48,0,555)
+    self.empty=T:Text(p,"",14,55,326,790,T.muted);self.empty:SetJustifyH("CENTER");self.empty:SetWordWrap(true);self.empty:SetHeight(100)
+    self.paging=T:Text(p,"",11,0,598,430,T.muted)
+    self.prev=T:Button(p,"< AH page",112,28,650,588,function() if U.activeTab~="Owned" then M:Search(M.query,M.page-1,M.exact,M.filters) end end)
+    self.next=T:Button(p,"AH page >",122,28,770,588,function() if U.activeTab~="Owned" then M:Search(M.query,M.page+1,M.exact,M.filters) end end)
+    local detail=T:Panel(p,892,48,0,625)
     self.detail=T:Text(detail,"Select an item to see its details.",11,12,10,598,T.muted);self.detail:SetHeight(32);self.detail:SetWordWrap(true)
     self.detailWatch=T:Button(detail,"Watch",112,28,642,10,function() if U.selected then FM:ToggleWatch(U.selected);U:RefreshMarket() end end)
     self.detailSearch=T:Button(detail,"Search",112,28,766,10,function()
@@ -215,6 +267,8 @@ function U:RefreshMarket()
     if self.selected then
         local d=self.selected
         if owned then self.detail:SetText(d.name.." | "..M:OwnerStatus(d).."\n"..M:OwnerCheckText(d))
-        else self.detail:SetText(d.name.." | Stack: "..FM:Money(d.buyout).."\n"..(d.reference and ("Reference: "..FM:Money(d.reference).." / "..d.referenceSource) or "No reliable reference price available.")) end
+        else
+            local flip=d.flipPlan and ("\nFLIP REVIEW: exit "..FM:Money(d.flipPlan.exitUnit).." / item | net "..(d.flipPlan.profit>=0 and "+" or "-")..FM:Money(math.abs(d.flipPlan.profit)).." | ROI "..string.format("%.0f%%",d.flipPlan.roi*100)) or ""
+            self.detail:SetText(d.name.." | Stack: "..FM:Money(d.buyout).."\n"..(d.reference and ("Reference: "..FM:Money(d.reference).." / "..d.referenceSource) or "No reliable reference price available.")..flip) end
     else self.detail:SetText(owned and "Select an auction, then click Check price to compare it with the current loaded market page." or "Select an item to see its details.") end
 end

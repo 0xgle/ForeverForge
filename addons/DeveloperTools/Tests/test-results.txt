@@ -1,0 +1,33 @@
+PASS Core cannot be disabled
+PASS Dependency enabling is transitive and staged
+PASS Disabling dependencies also disables dependents
+CHAT |cff60dcccForeverCore|r  Missing required dependency: AbsentLibrary
+PASS Missing dependency leaves plan intact
+CHAT |cff60dcccForeverCore|r  This action is available after combat.
+CHAT |cff60dcccForeverCore|r  This action is available after combat.
+CHAT |cff60dcccForeverCore|r  This action is available after combat.
+PASS Combat blocks stage/apply/reload
+PASS Apply current character and undo
+CHAT |cff60dcccForeverCore|r  Apply failed; previous states restored: [string "unpack=table.unpack..."]:121: Injected failure
+PASS Failed API call rolls back all mutations
+PASS Save/export/import round trip
+PASS Import rejects code, duplicate entries, size and invalid schema
+PASS Profiles do not overwrite names
+CHAT |cff60dcccForeverCore|r  ForeverDependent needs TestLibrary. Resolve the profile conflict first.
+PASS Profile conflicts are atomic
+CHAT |cff60dcccForeverCore|r  1 uninstalled addons skipped.
+PASS Unknown imported addons are safely skipped
+PASS Legacy slash discovery
+CHAT |cff60dcccForeverCore|r  ForeverChat failed. See Diagnostics.
+PASS Callback failures are bounded and isolated
+PASS All six UI pages build and refresh
+PASS Refresh reuses frames without leaking widgets
+PASS Modal apply and nested confirmation stay usable
+PASS Memory/report has versions and no character identifier
+PASS Minimap creation, scaling and slash commands
+PASS Per-addon minimap icon overrides work
+PASS Your Addons minimap checkbox uses the shared icon policy
+PASS Minimap icon manager opens and reuses widgets
+PASS Legacy API enable-state parameter order
+PASS Search, favorites and paging do not expose stale rows
+TOTAL 24 tests passed. Lua Lua 5.4. Game client validation remains required.

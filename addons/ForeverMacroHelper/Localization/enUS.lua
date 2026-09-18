@@ -1,7 +1,7 @@
 local _, FMH = ...
 FMH.L = FMH.L or {}
 local L=FMH.L
-L.SUBTITLE="Classic Era macro library • PvE + PvP • one-click install"
+L.SUBTITLE="CLASSIC ERA  /  PVE + PVP  /  214 MACROS"
 L.SEARCH="Search macros..."
 L.ALL="All"
 L.PVE="PvE"
@@ -15,7 +15,7 @@ L.INSTALLED="Installed"
 L.IN_COMBAT="Unavailable in combat"
 L.INSTALL_PVE="Install PvE Pack"
 L.INSTALL_PVP="Install PvP Pack"
-L.INSTALL_RECOMMENDED="Install Recommended"
+L.INSTALL_RECOMMENDED="Starter pack"
 L.CHAR_MACROS="Character macros"
 L.CLICK_SELECT="Select a macro from the library"
 L.BY="by 0xgle"

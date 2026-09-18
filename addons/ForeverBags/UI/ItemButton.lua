@@ -172,14 +172,15 @@ end
 function IB:Create(parent)
     local b = NewBackdropButton(parent)
     b:SetSize(FB.settings and FB.settings.iconSize or 42, FB.settings and FB.settings.iconSize or 42)
-    b:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8", edgeFile="Interface\\Buttons\\WHITE8x8", edgeSize=2})
-    b:SetBackdropColor(0.025,0.035,0.045,1)
-    b:SetBackdropBorderColor(0.4,0.4,0.4,1)
+    -- Clean, standard item slot. Rarity is communicated by the thin border only;
+    -- the previous decorative frame/new-item glow made every item look highlighted.
+    b:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8", edgeFile="Interface\\Buttons\\WHITE8x8", edgeSize=1})
+    b:SetBackdropColor(0.02,0.027,0.033,1)
+    b:SetBackdropBorderColor(0.4,0.4,0.4,0.9)
 
-    b.frameArt = b:CreateTexture(nil, "BACKGROUND", nil, 1)
-    b.frameArt:SetAllPoints()
-    b.frameArt:SetTexture(FB.Media:Texture("slot_frame"))
-    b.frameArt:SetAlpha(0.45)
+    -- Intentionally do not create the old slot_frame texture here.
+    -- That artwork contains the cyan bloom seen in older releases.
+    -- Regular slots are now only the dark backdrop + thin rarity border.
 
     b.icon = b:CreateTexture(nil, "ARTWORK", nil, 1)
     b.icon:SetPoint("TOPLEFT", 5, -5)
@@ -241,13 +242,8 @@ function IB:Create(parent)
         end
     end)
 
-    b.newGlow = b:CreateTexture(nil, "BACKGROUND")
-    b.newGlow:SetPoint("TOPLEFT", -5, 5)
-    b.newGlow:SetPoint("BOTTOMRIGHT", 5, -5)
-    b.newGlow:SetTexture(FB.Media:Icon("selected"))
-    b.newGlow:SetBlendMode("ADD")
-    b.newGlow:SetAlpha(0.38)
-    b.newGlow:Hide()
+    -- No permanent new-item texture is created. New-item state remains data-only
+    -- for Recent/search filtering, so it cannot accidentally tint every slot blue.
 
     b:SetScript("OnEnter", function(self)
         self.hover:SetAlpha(0.85)
@@ -275,7 +271,6 @@ function IB:SetItem(button, item)
     button:SetBackdropBorderColor(c[1],c[2],c[3],1)
     button.favorite:Show()
     button.favorite:SetAlpha(item.favorite and 1 or 0.22)
-    button.newGlow:SetShown(item.isNew and true or false)
     button.badge:Hide()
     if item.tag == "keep" then
         button.badge:SetTexture(FB.Media:Icon("keep")); button.badge:Show()

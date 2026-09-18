@@ -2,7 +2,7 @@
 
 The command center for the Forever addon collection. Created by **0xgle**.
 
-Version **1.0.0-rc1**. Target: **WoW Classic Era 1.15.9 / Interface 11509**, including its Hardcore realms. This release candidate is ready for in-game acceptance testing. It has not been run inside the WoW client. Compatibility with a different client, including Forever, is not yet certified.
+Version **1.0.3-rc4**. Target: **WoW Classic Era 1.15.9 / Interface 11509**, including its Hardcore realms. This release candidate is ready for in-game acceptance testing. It has not been run inside the WoW client. Compatibility with a different client, including Forever, is not yet certified.
 
 ## Install
 
@@ -45,7 +45,10 @@ The displayed profile is the last profile applied through Core, not a guarantee 
 | `/fc addons` | Open the addon manager |
 | `/fc profiles` | Open profiles |
 | `/fc diag` | Open diagnostics |
-| `/fc minimap` | Toggle the minimap button |
+| `/fc minimap` | Toggle the ForeverCore minimap button |
+| `/fc icons` | Open per-addon minimap icon manager |
+| `/fc icons hide` | Hide other addon icons by default |
+| `/fc icons show` | Show other addon icons by default |
 | `/fc reset` | Center the window and reset its scale |
 | `/fc help` | Show command help |
 
@@ -68,3 +71,6 @@ Original AI-assisted artwork is packaged as uncompressed, power-of-two TGA textu
 Automated logic and mocked-UI checks are documented in `Docs/QA.md`. Those checks do not simulate WoW's secure execution system, exact fonts, texture rendering or real client addon APIs. Complete the included in-game checklist before publishing this as a stable 1.0.0 release.
 
 Copyright 2026 0xgle. All rights reserved. See LICENSE.txt.
+
+### Minimap icon control
+ForeverCore can hide third-party minimap launchers by default and selectively re-enable individual addon icons from **Appearance > Choose individual addon icons**. `/fc icons` opens the same manager. Per-addon choices are saved account-wide.
