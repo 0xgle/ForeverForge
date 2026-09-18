@@ -1,8 +1,9 @@
-## Interface: 120100, 120001
+## Interface: 120100, 16001, 11509
 ## Title: ForeverBags
-## Notes: Premium one-window inventory for WoW Forever. Created by 0xgle. All rights reserved.
+## Notes: Modern inventory replacement for WoW Forever with reagent bag support. Created by 0xgle.
 ## Author: 0xgle
-## Version: 0.9.7-beta6
+## X-License: All Rights Reserved
+## Version: 1.0.0
 ## SavedVariables: ForeverBagsDB
 ## IconTexture: Interface\\AddOns\\ForeverBags\\Media\\Icons\\bag.tga
 ## Category: Bags & Inventory

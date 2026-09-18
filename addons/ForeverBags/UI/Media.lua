@@ -25,7 +25,10 @@ function M:Texture(name)
 end
 
 M.quality = {
-    [0] = {0.45,0.45,0.45}, [1] = {0.88,0.88,0.88}, [2] = {0.15,0.95,0.25},
+    -- Common/poor items deliberately use a restrained steel edge. Bright white
+    -- borders compete with the artwork and can look like misaligned stock
+    -- Blizzard frames when several materials are shown next to each other.
+    [0] = {0.25,0.28,0.28}, [1] = {0.31,0.35,0.35}, [2] = {0.15,0.95,0.25},
     [3] = {0.15,0.55,1.0}, [4] = {0.72,0.25,1.0}, [5] = {1.0,0.55,0.05}, [6] = {0.9,0.55,0.15},
 }
 

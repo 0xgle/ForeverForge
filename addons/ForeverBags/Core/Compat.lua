@@ -2,126 +2,203 @@ local _, FB = ...
 FB.API = FB.API or {}
 local API = FB.API
 
+-- Forever currently exposes the modern container namespace, but the same addon
+-- should still survive on Classic-style branches. Keep every read behind one
+-- compatibility layer and derive bag IDs from Blizzard constants instead of
+-- hardcoding a particular expansion layout.
+API.BACKPACK = tonumber(BACKPACK_CONTAINER) or 0
+API.REGULAR_BAG_MAX = tonumber(NUM_BAG_SLOTS) or 4
+
+local totalEquipped = tonumber(NUM_TOTAL_EQUIPPED_BAG_SLOTS)
+if totalEquipped and totalEquipped >= API.REGULAR_BAG_MAX then
+    API.PLAYER_BAG_MAX = totalEquipped
+else
+    API.PLAYER_BAG_MAX = API.REGULAR_BAG_MAX
+end
+
+local enumReagent = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag
+if type(enumReagent) == "number" then
+    API.REAGENT_BAG = enumReagent
+    API.PLAYER_BAG_MAX = math.max(API.PLAYER_BAG_MAX, enumReagent)
+elseif CharacterReagentBag0Slot then
+    API.REAGENT_BAG = API.REGULAR_BAG_MAX + 1
+    API.PLAYER_BAG_MAX = math.max(API.PLAYER_BAG_MAX, API.REAGENT_BAG)
+elseif API.PLAYER_BAG_MAX > API.REGULAR_BAG_MAX then
+    API.REAGENT_BAG = API.PLAYER_BAG_MAX
+end
+
+local function tryCall(fn, ...)
+    if type(fn) ~= "function" then return false end
+    local ok, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r = pcall(fn, ...)
+    if not ok then return false end
+    return true, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r
+end
+
 function API:GetNumSlots(bag)
+    bag = tonumber(bag)
+    if bag == nil then return 0 end
+
     if C_Container and C_Container.GetContainerNumSlots then
-        return C_Container.GetContainerNumSlots(bag) or 0
+        local ok, value = tryCall(C_Container.GetContainerNumSlots, bag)
+        if ok then return tonumber(value) or 0 end
     end
-    return (GetContainerNumSlots and GetContainerNumSlots(bag)) or 0
+
+    if GetContainerNumSlots then
+        local ok, value = tryCall(GetContainerNumSlots, bag)
+        if ok then return tonumber(value) or 0 end
+    end
+
+    return 0
 end
 
 function API:GetItemInfo(bag, slot)
+    bag, slot = tonumber(bag), tonumber(slot)
+    if bag == nil or slot == nil then return nil end
+
     if C_Container and C_Container.GetContainerItemInfo then
-        local info = C_Container.GetContainerItemInfo(bag, slot)
-        if not info then return nil end
-        return {
-            icon = info.iconFileID,
-            count = info.stackCount or 1,
-            locked = info.isLocked,
-            quality = info.quality,
-            readable = info.isReadable,
-            lootable = info.hasLoot,
-            link = info.hyperlink,
-            filtered = info.isFiltered,
-            noValue = info.hasNoValue,
-            itemID = info.itemID,
-            bound = info.isBound,
-        }
+        local ok, info = tryCall(C_Container.GetContainerItemInfo, bag, slot)
+        if ok and info then
+            return {
+                icon = info.iconFileID,
+                count = info.stackCount or 1,
+                locked = info.isLocked,
+                quality = info.quality,
+                readable = info.isReadable,
+                lootable = info.hasLoot,
+                link = info.hyperlink,
+                filtered = info.isFiltered,
+                noValue = info.hasNoValue,
+                itemID = info.itemID,
+                bound = info.isBound,
+                itemName = info.itemName,
+            }
+        end
+        return nil
     end
+
     if GetContainerItemInfo then
-        local texture, count, locked, quality, readable, lootable, link, filtered, noValue, itemID = GetContainerItemInfo(bag, slot)
-        if not texture then return nil end
-        return { icon = texture, count = count or 1, locked = locked, quality = quality, readable = readable, lootable = lootable, link = link, filtered = filtered, noValue = noValue, itemID = itemID }
+        local ok, texture, count, locked, quality, readable, lootable, link, filtered, noValue, itemID =
+            tryCall(GetContainerItemInfo, bag, slot)
+        if ok and texture then
+            return {
+                icon = texture,
+                count = count or 1,
+                locked = locked,
+                quality = quality,
+                readable = readable,
+                lootable = lootable,
+                link = link,
+                filtered = filtered,
+                noValue = noValue,
+                itemID = itemID,
+            }
+        end
     end
 end
 
 function API:GetItemLink(bag, slot)
-    if C_Container and C_Container.GetContainerItemLink then return C_Container.GetContainerItemLink(bag, slot) end
-    if GetContainerItemLink then return GetContainerItemLink(bag, slot) end
+    if C_Container and C_Container.GetContainerItemLink then
+        local ok, link = tryCall(C_Container.GetContainerItemLink, bag, slot)
+        if ok then return link end
+    end
+    if GetContainerItemLink then
+        local ok, link = tryCall(GetContainerItemLink, bag, slot)
+        if ok then return link end
+    end
 end
 
-function API:PickupItem(bag, slot)
-    if C_Container and C_Container.PickupContainerItem then return C_Container.PickupContainerItem(bag, slot) end
-    if PickupContainerItem then return PickupContainerItem(bag, slot) end
-end
+function API:GetQuestInfo(bag, slot)
+    if C_Container and C_Container.GetContainerItemQuestInfo then
+        local ok, info = tryCall(C_Container.GetContainerItemQuestInfo, bag, slot)
+        if ok and info then
+            return (info.isQuestItem or info.questID ~= nil) and true or false, info.questID
+        end
+    end
 
-function API:UseItem(bag, slot)
-    if C_Container and C_Container.UseContainerItem then return C_Container.UseContainerItem(bag, slot) end
-    if UseContainerItem then return UseContainerItem(bag, slot) end
+    if GetContainerItemQuestInfo then
+        local ok, isQuest, questID, isActive = tryCall(GetContainerItemQuestInfo, bag, slot)
+        if ok then return (isQuest or isActive) and true or false, questID end
+    end
+
+    return false, nil
 end
 
 function API:IsNewItem(bag, slot)
     if C_NewItems and C_NewItems.IsNewItem then
-        local ok, value = pcall(C_NewItems.IsNewItem, bag, slot)
-        if ok then return value end
+        local ok, value = tryCall(C_NewItems.IsNewItem, bag, slot)
+        if ok then return value and true or false end
     end
     return false
 end
 
 function API:RemoveNewItem(bag, slot)
-    if C_NewItems and C_NewItems.RemoveNewItem then pcall(C_NewItems.RemoveNewItem, bag, slot) end
+    if C_NewItems and C_NewItems.RemoveNewItem then
+        pcall(C_NewItems.RemoveNewItem, bag, slot)
+    end
 end
 
-function API:GetQuestInfo(bag, slot)
-    if C_Container and C_Container.GetContainerItemQuestInfo then
-        local q = C_Container.GetContainerItemQuestInfo(bag, slot)
-        if q then return q.isQuestItem or q.questID ~= nil, q.questID end
+function API:IsPlayerContainer(bag)
+    bag = tonumber(bag)
+    return bag ~= nil and bag >= self.BACKPACK and bag <= self.PLAYER_BAG_MAX
+end
+
+function API:GetBagRange()
+    local bags = {}
+    for bag = self.BACKPACK, self.PLAYER_BAG_MAX do
+        bags[#bags + 1] = bag
     end
-    if GetContainerItemQuestInfo then
-        local isQuest, questID, isActive = GetContainerItemQuestInfo(bag, slot)
-        return isQuest or isActive, questID
+    return bags
+end
+
+function API:GetCooldown(bag, slot)
+    bag, slot = tonumber(bag), tonumber(slot)
+    if bag == nil or slot == nil then return 0, 0, 0 end
+
+    if C_Container and C_Container.GetContainerItemCooldown then
+        local ok, start, duration, enable = tryCall(C_Container.GetContainerItemCooldown, bag, slot)
+        if ok then return tonumber(start) or 0, tonumber(duration) or 0, tonumber(enable) or 0 end
     end
-    return false, nil
+
+    if GetContainerItemCooldown then
+        local ok, start, duration, enable = tryCall(GetContainerItemCooldown, bag, slot)
+        if ok then return tonumber(start) or 0, tonumber(duration) or 0, tonumber(enable) or 0 end
+    end
+
+    return 0, 0, 0
 end
 
 function API:GetItemStatic(itemID, link)
-    -- WoW Forever (12.x) uses the C_Item namespace.
-    -- Always prefer the numeric itemID: Forever can expose a short display link
-    -- such as "[Hearthstone]", which is not a reliable GetItemInfo query.
     local query = itemID or link
-
-    if not query or not C_Item then
-        return {
-            itemID = itemID, link = link, sellPrice = 0, crafting = false,
-        }
+    if not query then
+        return {itemID = itemID, link = link, sellPrice = 0, crafting = false}
     end
+
+    local getInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
+    local getInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
 
     local name, itemLink, quality, itemLevel, minLevel, itemType, itemSubType,
           stackCount, equipLoc, texture, sellPrice, classID, subClassID, bindType,
           expacID, setID, isCraftingReagent
 
-    if C_Item.GetItemInfo then
-        name, itemLink, quality, itemLevel, minLevel, itemType, itemSubType,
+    if getInfo then
+        local ok
+        ok, name, itemLink, quality, itemLevel, minLevel, itemType, itemSubType,
         stackCount, equipLoc, texture, sellPrice, classID, subClassID, bindType,
-        expacID, setID, isCraftingReagent = C_Item.GetItemInfo(query)
+        expacID, setID, isCraftingReagent = tryCall(getInfo, query)
+        if not ok then name = nil end
     end
 
-    -- GetItemInfo can legitimately return nil while the full item record is not
-    -- cached yet. Instant info is local and gives us enough data to render and
-    -- categorise the slot without breaking the whole bag refresh.
-    if not name and C_Item.GetItemInfoInstant then
-        local iid, iType, iSubType, iEquipLoc, icon, iClassID, iSubClassID =
-            C_Item.GetItemInfoInstant(query)
-
-        return {
-            itemID = iid or itemID,
-            name = nil,
-            link = link,
-            quality = quality,
-            itemLevel = itemLevel,
-            minLevel = minLevel,
-            itemType = iType or itemType,
-            itemSubType = iSubType or itemSubType,
-            stackCount = stackCount,
-            equipLoc = iEquipLoc or equipLoc,
-            icon = icon or texture,
-            sellPrice = sellPrice or 0,
-            classID = iClassID or classID,
-            subClassID = iSubClassID or subClassID,
-            bindType = bindType,
-            expacID = expacID,
-            setID = setID,
-            crafting = isCraftingReagent or false,
-        }
+    if (not name or not classID) and getInstant then
+        local ok, iid, iType, iSubType, iEquipLoc, icon, iClassID, iSubClassID = tryCall(getInstant, query)
+        if ok then
+            itemID = iid or itemID
+            itemType = itemType or iType
+            itemSubType = itemSubType or iSubType
+            equipLoc = equipLoc or iEquipLoc
+            texture = texture or icon
+            classID = classID or iClassID
+            subClassID = subClassID or iSubClassID
+        end
     end
 
     return {
@@ -146,26 +223,17 @@ function API:GetItemStatic(itemID, link)
     }
 end
 
-function API:GetBagRange()
-    -- Backpack + equipped bags. Forever may expose more, so probe a few positive bag IDs safely.
-    local bags = {0, 1, 2, 3, 4}
-    for bag = 5, 8 do
-        if self:GetNumSlots(bag) > 0 and not FB.state.bankOpen then
-            -- Some clients use IDs >=5 only for bank bags. Outside the bank, ignore them.
-        end
+-- Bank is intentionally not abstracted by ForeverBags. The native WoW bank UI
+-- owns bank browsing and interaction; this prevents bag replacement code from
+-- entering modern bank/tab protected paths.
+function API:DebugContainers()
+    local rows = {
+        "api=" .. ((C_Container and "C_Container") or "legacy"),
+        "playerMax=" .. tostring(self.PLAYER_BAG_MAX),
+        "reagent=" .. tostring(self.REAGENT_BAG or "none"),
+    }
+    for bag = self.BACKPACK, self.PLAYER_BAG_MAX do
+        rows[#rows + 1] = string.format("%d=%d", bag, self:GetNumSlots(bag))
     end
-    return bags
-end
-
-function API:GetBankRange()
-    local bags = {-1}
-    -- Classic-style bank containers. Empty/unavailable IDs simply report 0 slots.
-    for bag = 5, 13 do
-        if self:GetNumSlots(bag) > 0 then table.insert(bags, bag) end
-    end
-    -- Some modern branches expose reagent/account bank IDs as negative enum values. Probe cautiously.
-    for _, bag in ipairs({-3, -4, -5}) do
-        if self:GetNumSlots(bag) > 0 then table.insert(bags, bag) end
-    end
-    return bags
+    return table.concat(rows, "  ")
 end

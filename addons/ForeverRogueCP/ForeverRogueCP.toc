@@ -1,0 +1,9 @@
+## Interface: 120000
+## Title: Forever Combat Points
+## Notes: Premium combo point HUD for WoW Forever.
+## Author: 0xgle / ForeverAddons
+## Version: 1.0.0
+## IconTexture: Interface\AddOns\ForeverRogueCP\Media\curse_icon.tga
+## SavedVariables: ForeverRogueCPDB
+Core.lua
+UI.lua

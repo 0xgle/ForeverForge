@@ -1,0 +1,34 @@
+## Interface: 16001, 11509
+## Title: |cffd4ad6bForeverMarket|r
+## Notes: Advanced Auction House tools for WoW Forever: market search, trading, flip analysis, account analytics and local price intelligence.
+## Author: 0xgle
+## Version: 2.4.0-debug4
+## SavedVariables: ForeverMarketDB
+## OptionalDeps: ForeverCore
+## X-Forever-Suite: 1
+## X-Category: Auction House
+## X-License: All Rights Reserved
+Core.lua
+Debug.lua
+AuctionService.lua
+Database.lua
+Theme.lua
+PriceEngine.lua
+Groups.lua
+Market.lua
+Sell.lua
+Inventory.lua
+Ledger.lua
+Flip.lua
+Empire.lua
+Trader.lua
+ShoppingScan.lua
+Advisor.lua
+Crafting.lua
+UI.lua
+UIViews.lua
+UITrader.lua
+UIFlips.lua
+UIEmpire.lua
+UICrafting.lua
+Native.lua

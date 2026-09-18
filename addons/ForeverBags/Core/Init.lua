@@ -1,7 +1,7 @@
 local ADDON_NAME, FB = ...
 _G.ForeverBags = FB
 FB.name = ADDON_NAME
-FB.version = "0.9.7-beta6"
+FB.version = "1.0.0"
 FB.author = "0xgle"
 FB.copyright = "© 2026 0xgle. All rights reserved."
 FB.projectID = WOW_PROJECT_ID
@@ -9,7 +9,7 @@ FB.isClassicEra = WOW_PROJECT_CLASSIC and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC 
 FB.isMainline = WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE or false
 FB.modules = FB.modules or {}
 FB.callbacks = FB.callbacks or {}
-FB.state = FB.state or { bankOpen = false, merchantOpen = false, lastLootSource = nil, lastLootAt = 0 }
+FB.state = FB.state or { merchantOpen = false, lastLootSource = nil, lastLootAt = 0 }
 
 local function SafeCall(fn, ...)
     if type(fn) ~= "function" then return end
@@ -78,10 +78,11 @@ end
 FB.eventFrame = CreateFrame("Frame")
 local events = {
     "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "BAG_UPDATE_DELAYED",
-    "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
-    "PLAYERREAGENTBANKSLOTS_CHANGED", "MERCHANT_SHOW", "MERCHANT_CLOSED",
+    "BAG_UPDATE_COOLDOWN",
+    "MERCHANT_SHOW", "MERCHANT_CLOSED",
     "GET_ITEM_INFO_RECEIVED", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
-    "PLAYER_LOGOUT", "ITEM_LOCK_CHANGED"
+    "PLAYER_LOGOUT", "ITEM_LOCK_CHANGED", "PLAYER_REGEN_ENABLED",
+    "BAG_UPDATE", "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN"
 }
 for i = 1, #events do pcall(FB.eventFrame.RegisterEvent, FB.eventFrame, events[i]) end
 
@@ -92,12 +93,6 @@ FB.eventFrame:SetScript("OnEvent", function(_, event, ...)
         FB:Fire("LOGIN")
     elseif event == "PLAYER_ENTERING_WORLD" then
         FB:Fire("WORLD")
-    elseif event == "BANKFRAME_OPENED" then
-        FB.state.bankOpen = true
-        FB:Fire("BANK_OPEN")
-    elseif event == "BANKFRAME_CLOSED" then
-        FB.state.bankOpen = false
-        FB:Fire("BANK_CLOSE")
     elseif event == "MERCHANT_SHOW" then
         FB.state.merchantOpen = true
         FB:Fire("MERCHANT_OPEN")
@@ -110,6 +105,12 @@ FB.eventFrame:SetScript("OnEvent", function(_, event, ...)
         FB.state.lastLootAt = FB:Now()
     elseif event == "LOOT_CLOSED" then
         -- Keep the source briefly so BAG_UPDATE_DELAYED can associate newly-seen items.
+    elseif event == "ADDON_ACTION_BLOCKED" or event == "ADDON_ACTION_FORBIDDEN" then
+        local addon, action = ...
+        FB.state.lastBlocked = {event = event, addon = addon, action = action, at = FB:Now()}
+        if addon == ADDON_NAME then
+            FB:Print(event .. ": " .. tostring(action))
+        end
     end
     FB:Fire(event, ...)
 end)

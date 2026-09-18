@@ -1,14 +1,16 @@
-## Interface: 11509
+## Interface: 16001, 11509
 ## Title: |cffd4ad6bForeverMarket|r
-## Notes: ForeverForge Flip & Empire Engine: market, trader operations, flip finder, account analytics and local price intelligence.
+## Notes: Advanced Auction House tools for WoW Forever: market search, trading, flip analysis, account analytics and local price intelligence.
 ## Author: 0xgle
-## Version: 2.2.1-beta1
+## Version: 2.4.0-debug7
 ## SavedVariables: ForeverMarketDB
 ## OptionalDeps: ForeverCore
 ## X-Forever-Suite: 1
 ## X-Category: Auction House
 ## X-License: All Rights Reserved
 Core.lua
+Debug.lua
+AuctionService.lua
 Database.lua
 Theme.lua
 PriceEngine.lua

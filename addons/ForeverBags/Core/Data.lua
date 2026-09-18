@@ -33,7 +33,7 @@ function Data:Enrich(item)
 end
 
 function Data:ScanBags(bagList, source)
-    local out, free, total = {}, 0, 0
+    local out, emptySlots, free, total = {}, {}, 0, 0
     for i = 1, #bagList do
         local bag = bagList[i]
         local slots = FB.API:GetNumSlots(bag)
@@ -55,10 +55,13 @@ function Data:ScanBags(bagList, source)
                 if FB.Discoveries then FB.Discoveries:Observe(item) end
             else
                 free = free + 1
+                emptySlots[#emptySlots + 1] = {
+                    source = source or "bags", bag = bag, slot = slot, live = true, empty = true,
+                }
             end
         end
     end
-    return out, free, total
+    return out, free, total, emptySlots
 end
 
 function Data:Snapshot(items)
@@ -85,21 +88,19 @@ function Data:RestoreSnapshot(snap, source)
 end
 
 function Data:GetBags()
-    local items, free, total = self:ScanBags(FB.API:GetBagRange(), "bags")
+    local items, free, total, emptySlots = self:ScanBags(FB.API:GetBagRange(), "bags")
     if FB.char then
         FB.char.inventory = self:Snapshot(items)
         FB.char.money = GetMoney and GetMoney() or 0
         FB.char.lastSeen = FB:Now()
     end
-    return items, free, total
+    return items, free, total, false, emptySlots
 end
 
 function Data:GetBank()
-    if FB.state.bankOpen then
-        local items, free, total = self:ScanBags(FB.API:GetBankRange(), "bank")
-        if FB.char then FB.char.bank = self:Snapshot(items); FB.char.bankUpdated = FB:Now() end
-        return items, free, total, false
-    end
+    -- ForeverBags intentionally leaves bank browsing and interaction to the
+    -- native WoW bank UI. Keep an old snapshot readable for ownership totals,
+    -- but never query live bank containers from this addon.
     return self:RestoreSnapshot(FB.char and FB.char.bank, "bank-cache"), 0, 0, true
 end
 
@@ -178,7 +179,6 @@ function Data:Sort(items)
 end
 
 function Data:GetView(view)
-    if view == "bank" then return self:GetBank() end
     if view == "alts" then return self:GetAlts() end
     if view == "discoveries" then return self:GetDiscoveries() end
     return self:GetBags()
@@ -187,14 +187,12 @@ end
 local function ScheduleRefresh()
     FB:Debounce("scan", 0.05, function() FB:Fire("DATA_CHANGED") end)
 end
+FB:On("BAG_UPDATE", ScheduleRefresh)
 FB:On("BAG_UPDATE_DELAYED", ScheduleRefresh)
-FB:On("PLAYERBANKSLOTS_CHANGED", ScheduleRefresh)
-FB:On("PLAYERREAGENTBANKSLOTS_CHANGED", ScheduleRefresh)
+FB:On("BAG_UPDATE_COOLDOWN", ScheduleRefresh)
 FB:On("GET_ITEM_INFO_RECEIVED", ScheduleRefresh)
 FB:On("ITEM_LOCK_CHANGED", ScheduleRefresh)
 FB:On("PLAYER_MONEY", ScheduleRefresh)
-FB:On("BANK_OPEN", ScheduleRefresh)
-FB:On("BANK_CLOSE", ScheduleRefresh)
 FB:On("WORLD", ScheduleRefresh)
 FB:On("PLAYER_LOGOUT", function()
     if FB.char then FB.char.lastSeen = FB:Now(); FB.char.money = GetMoney and GetMoney() or FB.char.money end

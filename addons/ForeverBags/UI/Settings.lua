@@ -84,7 +84,7 @@ function S:Build()
     local nativeBags = MakeTextButton(f, "", 346)
     nativeBags:SetPoint("TOPLEFT", 22, -248)
     local function updateNativeBags()
-        nativeBags.text:SetText((FB.settings.nativeBagIntegration ~= false and "✓ " or "") .. "Use ForeverBags for WoW bag button + bag key")
+        nativeBags.text:SetText((FB.settings.nativeBagIntegration ~= false and "✓ " or "") .. "Open ForeverBags with Backpack / B")
     end
     nativeBags:SetScript("OnClick", function()
         FB.settings.nativeBagIntegration = not (FB.settings.nativeBagIntegration ~= false)

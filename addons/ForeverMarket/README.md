@@ -1,150 +1,151 @@
+# ForeverMarket 2.4.0-debug7
+
+Diagnostic build for WoW Forever Auction House posting. This build intentionally keeps the rc6 posting behaviour and adds detailed instrumentation only.
+
+## Debug procedure
+1. Open the Auction House.
+2. Type `/fmdebug clear`.
+3. Select one cheap item in Sell.
+4. Click Post and confirm once.
+5. Wait 3 seconds.
+6. Type `/fmdebug`, click **Snapshot**, then **Select all**, press **Ctrl+C**, and paste the log into ChatGPT.
+
+---
+
 # ForeverMarket
 
-**2.1.0-beta1 · by 0xgle · Classic Era 1.15.9 / Interface 11509**
+**2.4.0-debug7 · by 0xgle · WoW Forever · Interface 16001 / 11509**
 
-An English-language Auction House and trading addon for the ForeverForge suite, with market
-search, inventory-first selling, shopping lists, local price history, **Trader Engine**, **Flip Finder** and account-wide **Empire analytics**.
-Its workflow is inspired by Auctionator and TradeSkillMaster, with an original
-implementation. Neither addon is required. The goal is TSM-style power with a simpler workflow.
+ForeverMarket is an Auction House addon for the Forever suite with market search,
+inventory-first selling, owned-auction management, shopping lists, local price
+history, Trader Engine, Flip Finder and Empire analytics.
+
+ForeverMarket is standalone. No other Auction House addon is required.
 
 ## Installation
 
-1. Close WoW and keep a backup of your previous ForeverMarket folder.
-2. Replace `ForeverMarket` in
-   `World of Warcraft/_classic_era_/Interface/AddOns/` with the folder in this ZIP.
-3. Confirm the final path is `AddOns/ForeverMarket/ForeverMarket.toc`.
-4. Start the game and enable ForeverMarket. For a newer Classic Era interface
-   number, enable **Load out of date AddOns** if needed.
-5. Visit an auctioneer. ForeverMarket opens as the only visible Auction House
-   panel. Use `/fm` to open shopping lists and history away from an auctioneer.
+1. Close WoW Forever.
+2. Remove the previous `ForeverMarket` folder from `Interface/AddOns/`.
+3. Copy the `ForeverMarket` folder from this ZIP into `Interface/AddOns/`.
+4. Confirm the final path is `Interface/AddOns/ForeverMarket/ForeverMarket.toc`.
+5. Start WoW Forever and enable ForeverMarket.
 
-Keep your WTF folder. Saved prices, shopping lists, presets and settings remain
-intact. Version 0.9.0 prices lacked realm/faction information, so they are retained
-under `legacy` in SavedVariables rather than mixed into a new realm's history.
-Your watchlist is carried forward.
+Keep your `WTF` folder if you want to preserve saved prices, presets, shopping
+lists, watchlists and settings.
 
-Disable other Auction House replacements during testing. ForeverBags and
-ForeverCore can stay enabled. ForeverCore is optional.
+## Auction House integration
 
-## Selling from your bags
+ForeverMarket now takes over the Auction House visually while keeping the real
+Blizzard Auction House session open in the background.
 
-Open **Sell**. Your backpack and four equipped bags appear on the left; the auction
-form is on the right. Click an item to prepare it. A saved price preset is loaded
-automatically, or a price is suggested from available local observations.
+Talk to an auctioneer and open the Auction House. ForeverMarket opens as its own
+large top-level window instead of being squeezed inside `AuctionHouseFrame`. The
+native frame stays technically open but invisible so `C_AuctionHouse` remains
+connected to the live server session. A legacy backend remains available for
+compatible legacy Auction House clients.
 
-Check the unit price, stack size, stack count and duration, then click **Post auction**
-and confirm. Selecting an item never posts it. If no price data is available, enter
-a price or use **Check + suggest**; the addon does not invent a valuation.
+`/fm` and the ForeverCore Marketplace launcher open ForeverMarket only when an
+Auction House session is active. They do not create a tradable Auction House away
+from an auctioneer.
 
-The list refreshes when bags change. Identical item links are grouped with their
-combined quantity, while different variants remain separate. Search and paging
-work across the list. The quantity shown in the list is your inventory total;
-the form and confirmation determine how many items will actually be posted.
+Use **Blizzard AH** or `/fm blizzard` to reveal the standard Blizzard interface
+without closing the session. The ForeverMarket close button closes the Auction
+House panel/session through the native UI path.
 
-Recognized bound, quest, bind-on-pickup and loot-containing items are excluded.
-Locked stacks are marked. Final auction eligibility is decided by the game.
-Scanning only reads your bags; it does not move items or execute transactions.
-Put down any item on your cursor before selecting another item. Bank storage and
-equipped gear are not scanned.
+## Modern Auction House reliability
 
-## Features
+The modern backend uses a dedicated request service instead of issuing exact-item
+queries directly from individual UI modules. It waits for the Auction House
+throttle, resolves item-key data, validates that search results are complete and
+retries incomplete responses before Buy or Sell can act on them.
 
-- **Market:** name and exact-name search, server pages, scrolling through all
-  results on a page, sortable columns, name filter, maximum unit price and buyout filter.
-- **Buy and bid:** a total-cost confirmation, a fresh comparison against the live
-  auction before submitting, and checks against own or outdated auctions.
-- **Deals:** configurable threshold compared with local history or the median of
-  loaded results. Tooltips identify the reference source; discounts do not guarantee profit.
-- **Full scans:** requested only when the server permits them. A first-page query
-  is never presented as a full scan. Search a scanned item again before buying.
-- **Sell:** price per item, stack quantities, 12/24/48-hour durations, deposit and
-  estimated proceeds after your configured fee. Starting bid equals buyout.
-- **Price suggestions:** lowest other-seller price in recent results, or the latest
-  historical minimum; the status message identifies the source and its age.
-- **Item presets:** unit price, minimum price, stack size and duration.
-- **My auctions:** refresh, SOLD visibility, per-auction price checks, undercut status/filtering and cancellation with confirmation.
-- **Watchlist:** Shift-click a market row. Watched items remain available between searches.
-- **Shopping lists:** named groups, desired quantities and unit price limits,
-  editing/removal, and manually initiated searches.
-- **Price history:** separated by realm and faction, with one observation per
-  item/query, at most 90 observations per item and 2,500 items. Observations within
-  a minute are combined. Random-suffix variants have separate price keys.
-- **Tooltips:** local median unit price, data age and sample count.
-- **Activity log:** the latest 200 requests distinguish submission, server acceptance,
-  errors and missing confirmation. This is not a ledger of actual mailbox receipts.
-- **Settings:** undercut amount, deal threshold, fee, scale and automatic opening.
-- **ForeverCore:** optional launcher and settings integration through API v1.
-- **Trader Engine:** Groups, Auctioning Operations, Min/Normal/Max price rules, undercut, stack, post-cap and keep-in-bags settings.
-- **Price Engine:** local price expressions using `FMMarket`, `FMRecent`, `FMHistorical`, `FMMinBuyout`, `FMAvgBuy`, `FMAvgSell`, `FMVendorSell` and `FMCrafting`.
-- **Post / Cancel plans:** scan grouped bag items or current owned auctions and build a reviewable action plan before any transaction.
-- **My bids:** bidder-list tracking with WINNING / OUTBID states and normal confirmations before trading.
-- **Shopping Scan:** walks your shopping entries one at a time under the normal AH query throttle and stores current availability.
-- **Advisor:** descriptive opportunity signals from your own local observations; it does not promise profit or predict future prices.
-- **Flip Finder:** analyzes loaded auctions or a watched-item scan using net profit after AH cut, ROI, local price history, sample confidence and the next competing price. Every candidate is refreshed before purchase.
-- **Tracked flip accounting:** purchases reviewed through Flip Finder are tagged and matched to later SOLD rows using average cost basis, producing realized flip P/L without treating every AH purchase as a flip.
-- **Empire Ledger:** account-wide latest-gold snapshots, 14-day Net Sales / Realized Flip Profit charts and per-character gold/sales/profit rows. Open each character once to seed and refresh its gold snapshot.
-- **Ledger:** remembers purchases, posting/cancellation actions and SOLD rows observed in My Auctions, with realm activity plus account-wide Empire views.
-- **Inventory memory:** bag, bank and mailbox snapshots are remembered per character when those locations are visited.
-- **Crafting Profit:** captures an opened profession, estimates reagent cost / market value / craftable quantity and can add missing reagents to Shopping.
+For item purchases, ForeverMarket refreshes the exact auction list and then keeps
+the final `PlaceBid` call on the user's confirmation click. Commodity purchases
+use the server's staged purchase flow: live search, start purchase, server price
+update and final confirmation. Posting and cancellation are handled the same way:
+server queries may be queued, but protected actions remain user initiated.
 
-## Appearance and language
+If WoW Forever requests an additional posting confirmation, ForeverMarket uses
+its own second confirmation when the client exposes the modern confirm API. The
+Blizzard confirmation path is kept only as a compatibility fallback.
 
-The frame and icons use the author's ForeverBags/ForeverForge artwork. Actual item
-icons come from WoW. Drag the header to move the window; position and scale are saved.
+## Core features
 
-All addon-owned labels, tooltips, status messages and confirmations are English on
-all client locales. Item names, game-generated errors and game confirmation dialogs
-follow the WoW client language. User-created names and saved list contents are preserved.
-Older built-in activity log labels are displayed in English without rewriting history.
+- **Market:** live item search, category/subcategory filtering, level and quality
+  filters, local result filtering, sorting and price-history comparison.
+- **Modern Auction House browsing:** receives native browse-result batches and
+  requests additional results until the current search is complete.
+- **Buy:** item auctions and commodities use the native Auction House purchase
+  flow and require a final user confirmation.
+- **Sell:** select items directly from the ForeverMarket bag list, review price,
+  quantity, duration and deposit, then confirm posting.
+- **My auctions:** load owned auctions, show sold/active state, compare current
+  market pricing and cancel eligible auctions with confirmation.
+- **Deals:** compare current prices against your own locally collected history.
+- **Watchlist and Shopping:** keep items and shopping targets between sessions.
+- **Trader Engine:** groups, pricing rules and reviewable post/cancel plans.
+- **Flip Finder:** evaluates loaded offers against local price observations and
+  configured fees before presenting candidates for review.
+- **Ledger / Empire:** local transaction records, inventory snapshots and
+  account-wide character summaries.
+- **Crafting:** remembered crafting data and local reagent/value estimates.
+- **ForeverCore:** optional launcher/settings integration through API v1.
 
-## One visible Auction House panel
+All transactions remain user initiated. ForeverMarket does not perform unattended
+buying, posting, cancelling or mail collection.
 
-ForeverMarket parks the Blizzard panel off-screen while preserving the Auction
-House session and its native handlers. **Blizzard** restores the standard panel
-without closing the session. `/fm` switches back. Closing ForeverMarket while it
-owns the Auction House view also closes that session.
+## Selling
+
+Open the **Sell** tab and click an eligible item from the bag list. ForeverMarket
+uses the item's real bag location for the active Auction House API.
+
+Review the unit price, quantity, duration and deposit before clicking **Post auction**.
+Modern retail-style Auction House builds reject posting prices with unsupported
+copper precision, so ForeverMarket normalizes sell prices to a server-valid tick
+before posting. If the client requires an additional post confirmation, the
+confirmation remains user initiated.
+
+Recognized bound, quest and otherwise ineligible items are excluded where the
+client exposes enough information to identify them. Final eligibility is always
+decided by the game server.
+
+## Price data
+
+ForeverMarket stores its own local observations. Price history is separated by
+realm and faction. It represents observed asking prices, not guaranteed completed
+sale prices.
+
+Deals, Advisor, Flip Finder and pricing rules are analytical tools based on your
+local observations. They do not guarantee future prices or profit.
 
 ## Commands
 
 | Command | Action |
 | --- | --- |
-| `/fm` | Toggle ForeverMarket |
-| `/fm settings` | Open settings |
-| `/fm blizzard` | Restore the Blizzard interface |
-| `/fm scan` | Request a full scan |
-| `/fm reset` | Center the window without deleting data |
-| `/fm debug` | Print client/API/session diagnostics and the last error |
+| `/fm` | Open the full ForeverMarket window during an active Auction House session |
+| `/fm settings` | Open ForeverMarket directly on Settings during an active Auction House session |
+| `/fm blizzard` | Return to the standard Blizzard Auction House |
+| `/fm scan` | Start a market scan using the active Auction House backend |
+| `/fm reset` | Reset the saved ForeverMarket window position |
+| `/fm debug` | Print build, detected Auction House backend, session state and last error |
 
-## Compatibility and limitations
+## Compatibility
 
-Target: **Classic Era**, Interface 11509. WoW Forever/Mainline clients with a
-different auction API, including `C_AuctionHouse`, require a separate adapter.
-This package leaves trading to Blizzard when the legacy API is unavailable.
+ForeverMarket 2.4.0-debug7 detects the Auction House implementation at runtime:
 
-Filters and Deals cover loaded results, not the entire server without a scan.
-History tracks asking prices, not completed sale prices. Queries and full scans
-are subject to server limits.
+- **Modern:** `C_AuctionHouse` + `AuctionHouseFrame`
+- **Legacy fallback:** `QueryAuctionItems` + legacy auction functions
 
-For a neutral Auction House, manually set the fee to 15% instead of 5%.
-Neutral markets are not detected automatically; history is separated by realm
-and faction, not by auctioneer. Avoid mixing neutral and faction scans if you
-need separate valuations.
+The release TOC declares Interface `16001` and `11509` for the current WoW Forever
+client families used by this project.
 
-Shopping quantities and Trader plans are recommendations, not unattended automation.
-ForeverMarket 2.1 includes Groups, Auctioning Operations, local price expressions,
-crafting estimates, inventory snapshots and a lightweight ledger, but it does not
-perform background trading, automated mail collection, automatic reposting or desktop-app synchronization.
-Every transaction still requires a user click and confirmation. The server may still reject
-an auction that disappears between confirmation and processing.
+Some modern Auction House clients do not expose a separate bidder-list API.
+On those clients, bidding is handled through current market offers rather than a
+standalone My Bids list.
 
-## Verification
+## Release contents
 
-The current 102-assertion simulated Classic Era API suite passes with the English interface.
-It covers loading, every panel, switching interfaces, stale offers, query limits,
-unit/stack pricing, confirmations, data migration and inventory-first selling.
-Frame-model renders were reviewed for layout. These checks are not live WoW tests.
-
-Use `TESTING.md` before publishing. `DeveloperTools` contains the test harness and
-simulated previews; only the `ForeverMarket` folder belongs in AddOns.
+The release ZIP contains the runtime addon, media assets, README and changelog.
+Development scripts and local build helpers are not included.
 
 Copyright 2026 0xgle. All rights reserved.

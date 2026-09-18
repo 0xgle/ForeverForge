@@ -2,336 +2,348 @@ local _, FB = ...
 FB.ItemButton = FB.ItemButton or {}
 local IB = FB.ItemButton
 
-IB.nativeSlots = IB.nativeSlots or {}
-local nativeCounter = 0
+-- ForeverBags deliberately keeps Blizzard's own ContainerFrameItemButtonTemplate
+-- for live inventory slots. We only change presentation and non-protected tooltip
+-- behavior. Click, drag, receive-drag and modified-click scripts are left intact.
+IB.liveBySlot = IB.liveBySlot or {}
+IB.bagParents = IB.bagParents or {}
+IB.staticPool = IB.staticPool or {}
 
-local function NewBackdropButton(parent)
-    return CreateFrame("Button", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+local function NewBackdrop(parent)
+    return CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
 end
 
-local function SlotKey(bag, slot)
-    return tostring(bag) .. ":" .. tostring(slot)
+local function SafeHide(region)
+    if region and region.Hide then region:Hide() end
 end
 
-local function CreatePhysicalNativeSlot(parent, bag, slot)
-    -- ContainerFrameItemButtonTemplate is Blizzard's live bag-slot implementation.
-    -- Classic Era 1.15.9 uses the modern shared container UI too. The important
-    -- detail is that the template is initialized against a dedicated parent whose
-    -- ID is the bag ID, and each physical button is bound to one bag/slot only.
-    if InCombatLockdown and InCombatLockdown() then return nil end
+local function SetupSkin(button)
+    if button.fbSkin then return end
 
-    nativeCounter = nativeCounter + 1
-    local baseName = "ForeverBagsPhysicalSlot" .. nativeCounter
-    local holder = CreateFrame("Frame", baseName .. "Holder", parent or UIParent)
-    holder:SetID(bag)
-    holder.IsCombinedBagContainer = function() return false end
-    holder:SetSize(42, 42)
-    holder:Hide()
+    local skin = NewBackdrop(button)
+    skin:SetAllPoints(button)
+    skin:SetFrameLevel(button:GetFrameLevel() + 8)
+    skin:EnableMouse(false)
+    skin:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    skin:SetBackdropColor(0.018, 0.025, 0.032, 0.98)
+    skin:SetBackdropBorderColor(0.34, 0.38, 0.40, 0.95)
 
-    local ok, native = pcall(CreateFrame, "ItemButton", baseName, holder, "ContainerFrameItemButtonTemplate")
-    if not ok or not native then
-        ok, native = pcall(CreateFrame, "Button", baseName, holder, "ContainerFrameItemButtonTemplate")
-    end
-    if not ok or not native then
-        holder:Hide()
-        return nil
-    end
+    local icon = skin:CreateTexture(nil, "ARTWORK", nil, 1)
+    icon:SetPoint("TOPLEFT", 4, -4)
+    icon:SetPoint("BOTTOMRIGHT", -4, 4)
+    icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
-    native:SetAllPoints(holder)
-    native:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    if native.RegisterForDrag then native:RegisterForDrag("LeftButton") end
+    local shade = skin:CreateTexture(nil, "ARTWORK", nil, 2)
+    shade:SetPoint("TOPLEFT", icon, "TOPLEFT")
+    shade:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT")
+    shade:SetColorTexture(0, 0, 0, 0)
 
-    -- Classic Era 1.15.9 uses the shared container template, but the exact
-    -- initializer differs between branches/addons. Always seed every form of
-    -- slot identity Blizzard may consult when handling a click.
-    native:SetID(slot)
-    native.bagID = bag
-    if native.SetBagID then pcall(native.SetBagID, native, bag) end
+    local hover = skin:CreateTexture(nil, "OVERLAY", nil, 2)
+    hover:SetPoint("TOPLEFT", -1, 1)
+    hover:SetPoint("BOTTOMRIGHT", 1, -1)
+    hover:SetColorTexture(1, 0.84, 0.42, 0.13)
+    hover:Hide()
 
-    if native.Init then
-        -- Current shared-UI style used by bag replacements such as
-        -- BetterCombinedBag. bankType=0 is the normal character inventory.
-        pcall(native.Init, native, bag, slot, 0)
-    elseif native.Initialize then
-        pcall(native.Initialize, native, bag, slot)
-    end
+    local count = skin:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    count:SetPoint("BOTTOMRIGHT", -4, 3)
+    count:SetJustifyH("RIGHT")
+    count:SetTextColor(1, 1, 1)
+    count:SetShadowColor(0, 0, 0, 1)
+    count:SetShadowOffset(1, -1)
 
-    -- Re-apply after initialization in case the template reset either value.
-    native:SetID(slot)
-    native.bagID = bag
-    if native.SetBagID then pcall(native.SetBagID, native, bag) end
+    local itemLevel = skin:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    itemLevel:SetPoint("TOPLEFT", 4, -3)
+    itemLevel:SetTextColor(1, 0.82, 0.30)
+    itemLevel:SetShadowColor(0, 0, 0, 1)
+    itemLevel:SetShadowOffset(1, -1)
 
-    -- ContainerFrameItemButtonTemplate can be born hidden. 0.9.3 showed only
-    -- its holder, then disabled mouse on the ForeverBags visual button. That
-    -- left the item looking correct but with no live frame receiving clicks.
-    -- Keep Blizzard's button hidden visually via alpha, not via :Hide().
-    native:SetAlpha(0.001)
-    native:EnableMouse(true)
-    native:Hide()
+    local badge = skin:CreateTexture(nil, "OVERLAY", nil, 4)
+    badge:SetSize(17, 17)
+    badge:SetPoint("TOPRIGHT", 3, 3)
+    badge:Hide()
 
-    local record = {holder = holder, native = native, bag = bag, slot = slot, visual = nil}
+    local favorite = skin:CreateTexture(nil, "OVERLAY", nil, 4)
+    favorite:SetSize(15, 15)
+    favorite:SetPoint("BOTTOMLEFT", -1, -1)
+    favorite:SetTexture(FB.Media:Icon("favorite"))
+    favorite:SetAlpha(0.20)
 
-    native:HookScript("OnEnter", function()
-        local visual = record.visual
-        if not visual then return end
-        visual.hover:SetAlpha(0.85)
-        local item = visual.item
-        if item and FB.Ownership then
-            FB.Ownership:AddTooltip(GameTooltip, item)
-            if GameTooltip:IsShown() then GameTooltip:Show() end
-        end
-    end)
-    native:HookScript("OnLeave", function()
-        local visual = record.visual
-        if visual then visual.hover:SetAlpha(0) end
-    end)
-    native:HookScript("OnMouseDown", function()
-        local visual = record.visual
-        local item = visual and visual.item
-        if item and item.live then FB.API:RemoveNewItem(item.bag, item.slot) end
-    end)
+    local cooldown = CreateFrame("Cooldown", nil, skin, "CooldownFrameTemplate")
+    cooldown:SetPoint("TOPLEFT", icon, "TOPLEFT")
+    cooldown:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT")
+    if cooldown.SetDrawEdge then cooldown:SetDrawEdge(false) end
+    if cooldown.SetDrawBling then cooldown:SetDrawBling(false) end
+    cooldown:Hide()
 
-    return record
+    button.fbSkin = skin
+    button.fbIcon = icon
+    button.fbShade = shade
+    button.fbHover = hover
+    button.fbCount = count
+    button.fbItemLevel = itemLevel
+    button.fbBadge = badge
+    button.fbFavorite = favorite
+    button.fbCooldown = cooldown
 end
 
-function IB:GetNativeSlot(parent, bag, slot)
-    local key = SlotKey(bag, slot)
-    local record = self.nativeSlots[key]
-    if record then return record end
-    record = CreatePhysicalNativeSlot(parent, bag, slot)
-    if record then self.nativeSlots[key] = record end
-    return record
-end
+local function ShowLiveTooltip(button)
+    button.fbHover:Show()
 
-function IB:DetachNative(button)
-    local record = button.nativeRecord
-    if not record then return end
-    if record.visual == button then record.visual = nil end
-    record.native:Hide()
-    record.holder:Hide()
-    record.holder:ClearAllPoints()
-    button.nativeRecord = nil
-end
+    local bag, slot = button.fbBag, button:GetID()
+    if bag == nil or not slot or slot <= 0 then return end
 
-function IB:AttachNative(button, item)
-    self:DetachNative(button)
-    if not item or not item.live or item.bag == nil or not item.slot then return false end
-
-    local record = self:GetNativeSlot(button:GetParent(), item.bag, item.slot)
-    if not record then return false end
-
-    -- A physical slot can only be displayed in one place at once.
-    if record.visual and record.visual ~= button then
-        record.visual.nativeRecord = nil
-    end
-    record.visual = button
-    button.nativeRecord = record
-
-    if record.holder:GetParent() ~= button:GetParent() and not (InCombatLockdown and InCombatLockdown()) then
-        record.holder:SetParent(button:GetParent())
-    end
-    record.holder:ClearAllPoints()
-    record.holder:SetAllPoints(button)
-    record.holder:SetFrameLevel(button:GetFrameLevel() + 20)
-
-    -- The physical Blizzard button itself must be shown. Showing only its
-    -- holder is not sufficient when the inherited template starts hidden.
-    record.native:SetID(item.slot)
-    record.native.bagID = item.bag
-    if record.native.SetBagID then pcall(record.native.SetBagID, record.native, item.bag) end
-    record.native:SetAlpha(0.001)
-    record.native:EnableMouse(true)
-    record.native:Show()
-    record.holder:Show()
-    return true
-end
-
-function IB:PrewarmInventory()
-    if InCombatLockdown and InCombatLockdown() then return end
-    local parent = FB.scrollChild or UIParent
-    for bag = 0, (tonumber(NUM_BAG_SLOTS) or 4) do
-        -- 40 covers current Classic Era bag capacities and prevents dynamic
-        -- secure-template allocation when bag contents change during combat.
-        for slot = 1, 40 do
-            self:GetNativeSlot(parent, bag, slot)
-        end
-    end
-end
-
-function IB:PrewarmBank()
-    if InCombatLockdown and InCombatLockdown() then return end
-    local parent = FB.scrollChild or UIParent
-    local bags = FB.API:GetBankRange()
-    for i = 1, #bags do
-        local bag = bags[i]
-        local slots = math.max(FB.API:GetNumSlots(bag), bag == -1 and 28 or 0)
-        for slot = 1, slots do self:GetNativeSlot(parent, bag, slot) end
-    end
-end
-
-function IB:Create(parent)
-    local b = NewBackdropButton(parent)
-    b:SetSize(FB.settings and FB.settings.iconSize or 42, FB.settings and FB.settings.iconSize or 42)
-    -- Clean, standard item slot. Rarity is communicated by the thin border only;
-    -- the previous decorative frame/new-item glow made every item look highlighted.
-    b:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8x8", edgeFile="Interface\\Buttons\\WHITE8x8", edgeSize=1})
-    b:SetBackdropColor(0.02,0.027,0.033,1)
-    b:SetBackdropBorderColor(0.4,0.4,0.4,0.9)
-
-    -- Intentionally do not create the old slot_frame texture here.
-    -- That artwork contains the cyan bloom seen in older releases.
-    -- Regular slots are now only the dark backdrop + thin rarity border.
-
-    b.icon = b:CreateTexture(nil, "ARTWORK", nil, 1)
-    b.icon:SetPoint("TOPLEFT", 5, -5)
-    b.icon:SetPoint("BOTTOMRIGHT", -5, 5)
-    b.icon:SetTexCoord(0.07,0.93,0.07,0.93)
-
-    -- A border-only highlight keeps the real item artwork visible on hover.
-    b.hover = CreateFrame("Frame", nil, b, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    b.hover:EnableMouse(false)
-    b.hover:SetPoint("TOPLEFT", -1, 1)
-    b.hover:SetPoint("BOTTOMRIGHT", 1, -1)
-    b.hover:SetBackdrop({edgeFile="Interface\\Buttons\\WHITE8x8", edgeSize=1})
-    b.hover:SetBackdropBorderColor(1,0.9,0.65,1)
-    b.hover:SetAlpha(0)
-
-    b.count = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    b.count:SetPoint("BOTTOMRIGHT", -4, 4)
-    b.count:SetJustifyH("RIGHT")
-    b.count:SetTextColor(1,1,1)
-    b.count:SetShadowColor(0,0,0,1); b.count:SetShadowOffset(1,-1)
-
-    b.itemLevel = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    b.itemLevel:SetPoint("TOPLEFT", 4, -3)
-    b.itemLevel:SetTextColor(1,0.82,0.3)
-
-    b.badge = b:CreateTexture(nil, "OVERLAY")
-    b.badge:SetSize(18,18)
-    b.badge:SetPoint("TOPRIGHT", 4, 4)
-    b.badge:Hide()
-
-    b.metaButton = CreateFrame("Button", nil, b)
-    b.metaButton:SetSize(17,17)
-    b.metaButton:SetPoint("BOTTOMLEFT", -2, -1)
-    b.metaButton:SetFrameLevel(b:GetFrameLevel() + 50)
-    b.metaButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    b.favorite = b.metaButton:CreateTexture(nil, "OVERLAY")
-    b.favorite:SetAllPoints()
-    b.favorite:SetTexture(FB.Media:Icon("favorite"))
-    b.favorite:SetAlpha(0.22)
-    b.metaButton:SetScript("OnEnter", function(self)
-        b.favorite:SetAlpha(1)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("ForeverBags", 1, 0.82, 0.35)
-        GameTooltip:AddLine("Left-click: favorite", 0.8, 0.8, 0.8)
-        GameTooltip:AddLine("Right-click: cycle Keep / Sell / Bank", 0.8, 0.8, 0.8)
-        GameTooltip:Show()
-    end)
-    b.metaButton:SetScript("OnLeave", function()
-        b.favorite:SetAlpha((b.item and b.item.favorite) and 1 or 0.22)
-        GameTooltip:Hide()
-    end)
-    b.metaButton:SetScript("OnClick", function(_, mouseButton)
-        if not b.item then return end
-        if mouseButton == "LeftButton" then
-            FB:ToggleFavorite(b.item.itemID)
-        elseif mouseButton == "RightButton" then
-            local tag = FB:CycleTag(b.item.itemID)
-            FB:Print((b.item.name or "Item") .. " → " .. (tag or "none"))
-        end
-    end)
-
-    -- No permanent new-item texture is created. New-item state remains data-only
-    -- for Recent/search filtering, so it cannot accidentally tint every slot blue.
-
-    b:SetScript("OnEnter", function(self)
-        self.hover:SetAlpha(0.85)
-        IB:OnEnter(self)
-    end)
-    b:SetScript("OnLeave", function(self)
-        self.hover:SetAlpha(0)
-        GameTooltip:Hide()
-    end)
-    b:RegisterForClicks("AnyUp")
-    b:SetScript("OnClick", function(self, mouseButton)
-        IB:OnVisualClick(self, mouseButton)
-    end)
-    b:HookScript("OnHide", function(self) IB:DetachNative(self) end)
-
-    return b
-end
-
-function IB:SetItem(button, item)
-    button.item = item
-    button.icon:SetTexture(item.icon or 134400)
-    button.count:SetText((item.count and item.count > 1) and tostring(item.count) or "")
-    button.itemLevel:SetText((item.itemLevel and item.itemLevel > 1 and item.category == "equipment") and tostring(item.itemLevel) or "")
-    local c = FB.Media.quality[item.quality or 1] or FB.Media.quality[1]
-    button:SetBackdropBorderColor(c[1],c[2],c[3],1)
-    button.favorite:Show()
-    button.favorite:SetAlpha(item.favorite and 1 or 0.22)
-    button.badge:Hide()
-    if item.tag == "keep" then
-        button.badge:SetTexture(FB.Media:Icon("keep")); button.badge:Show()
-    elseif item.tag == "sell" then
-        button.badge:SetTexture(FB.Media:Icon("sell")); button.badge:Show()
-    elseif item.tag == "bank" then
-        button.badge:SetTexture(FB.Media:Icon("bank_badge")); button.badge:Show()
-    end
-    button.icon:SetDesaturated(item.locked and true or false)
-    button:SetAlpha(item.locked and 0.6 or 1)
-
-    local native = self:AttachNative(button, item)
-    button:EnableMouse(not native)
-    button.metaButton:EnableMouse(true)
-    button.metaButton:SetFrameLevel(button:GetFrameLevel() + 50)
-end
-
-function IB:OnEnter(button)
-    local item = button.item
-    if not item then return end
     GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
     local shown = false
-    if item.live and item.bag ~= nil and item.slot and GameTooltip.SetBagItem then
-        local ok = pcall(GameTooltip.SetBagItem, GameTooltip, item.bag, item.slot)
+    if GameTooltip.SetBagItem then
+        local ok = pcall(GameTooltip.SetBagItem, GameTooltip, bag, slot)
         shown = ok
     end
-    if not shown and item.link then pcall(GameTooltip.SetHyperlink, GameTooltip, item.link) end
-    if not item.link then GameTooltip:AddLine(item.name or ("Item "..tostring(item.itemID or "?"))) end
-    if FB.Ownership then FB.Ownership:AddTooltip(GameTooltip, item) end
+    if not shown and button.fbItem and button.fbItem.link then
+        pcall(GameTooltip.SetHyperlink, GameTooltip, button.fbItem.link)
+    end
+    if FB.Ownership and button.fbItem then
+        FB.Ownership:AddTooltip(GameTooltip, button.fbItem)
+    end
     GameTooltip:Show()
 end
 
-function IB:OnVisualClick(button, mouseButton)
-    local item = button.item
-    if not item then return end
-    if mouseButton == "MiddleButton" then
-        if IsAltKeyDown() then
-            local tag = FB:CycleTag(item.itemID)
-            FB:Print((item.name or "Item") .. " → " .. (tag or "none"))
+local function HideTooltip(button)
+    if button.fbHover then button.fbHover:Hide() end
+    GameTooltip:Hide()
+    if ResetCursor then ResetCursor() end
+end
+
+local function CreateLive(parent, bag, slot)
+    -- This mirrors the working pattern used by established bag addons: the live
+    -- slot itself is the Blizzard container item button. There is no proxy button,
+    -- no transparent click catcher and no custom OnClick/OnDrag script.
+    local name = string.format("ForeverBagsLiveItem_%d_%d", bag, slot)
+    local button = CreateFrame("ItemButton", name, parent, "ContainerFrameItemButtonTemplate")
+    button.fbLive = true
+    button.fbBag = bag
+    button.bag = bag
+    button:SetID(slot)
+    button:Hide()
+
+    -- Disable Blizzard's automatic display refresh only. Keep protected/native
+    -- interaction scripts exactly as the template created them.
+    button:SetScript("OnEvent", nil)
+    button:SetScript("OnShow", nil)
+
+    button.UpdateTooltip = function(self) ShowLiveTooltip(self) end
+    button:SetScript("OnEnter", ShowLiveTooltip)
+    button:SetScript("OnLeave", HideTooltip)
+
+    SetupSkin(button)
+
+    -- The native template is kept for its click/drag behaviour, but its default
+    -- quick-slot artwork must not bleed through the ForeverBags skin. Some
+    -- Forever builds expose the stock Normal/Highlight textures differently,
+    -- so mute them without replacing the button or any protected scripts.
+    local normal = button.GetNormalTexture and button:GetNormalTexture()
+    if normal and normal.SetAlpha then normal:SetAlpha(0) end
+    local pushed = button.GetPushedTexture and button:GetPushedTexture()
+    if pushed and pushed.SetAlpha then pushed:SetAlpha(0) end
+    local highlight = button.GetHighlightTexture and button:GetHighlightTexture()
+    if highlight and highlight.SetAlpha then highlight:SetAlpha(0) end
+    local checked = button.GetCheckedTexture and button:GetCheckedTexture()
+    if checked and checked.SetAlpha then checked:SetAlpha(0) end
+
+    -- Cover the remaining stock artwork with our own skin. These are visual
+    -- regions only; the Blizzard item-button interaction path stays untouched.
+    SafeHide(button.IconBorder)
+    SafeHide(button.IconOverlay)
+    SafeHide(button.NewItemTexture)
+    SafeHide(button.BattlepayItemTexture)
+    SafeHide(button.JunkIcon)
+
+    return button
+end
+
+local function CreateStatic(parent, index)
+    local button = CreateFrame("Button", "ForeverBagsStaticItem" .. tostring(index), parent,
+        BackdropTemplateMixin and "BackdropTemplate" or nil)
+    button.fbLive = false
+    button:Hide()
+    SetupSkin(button)
+    button:RegisterForClicks("AnyUp")
+    button:SetScript("OnEnter", function(self)
+        self.fbHover:Show()
+        local item = self.fbItem
+        if not item then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if item.link then
+            pcall(GameTooltip.SetHyperlink, GameTooltip, item.link)
         else
-            FB:ToggleFavorite(item.itemID)
+            GameTooltip:AddLine(item.name or ("Item " .. tostring(item.itemID or "?")))
         end
-        return
+        if FB.Ownership then FB.Ownership:AddTooltip(GameTooltip, item) end
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", HideTooltip)
+    button:SetScript("OnClick", function(self, mouseButton)
+        if mouseButton ~= "MiddleButton" or not self.fbItem then return end
+        if IsAltKeyDown() then
+            local tag = FB:CycleTag(self.fbItem.itemID)
+            FB:Print((self.fbItem.name or "Item") .. " -> " .. (tag or "none"))
+        else
+            FB:ToggleFavorite(self.fbItem.itemID)
+        end
+    end)
+    return button
+end
+
+function IB:GetBagParent(root, bag)
+    local proxy = self.bagParents[bag]
+    if proxy then return proxy end
+    if InCombatLockdown and InCombatLockdown() then return nil end
+
+    proxy = CreateFrame("Frame", "ForeverBagsBagProxy" .. tostring(bag), root or UIParent)
+    proxy:SetID(bag)
+    proxy:SetSize(1, 1)
+    proxy:SetPoint("TOPLEFT", root or UIParent, "TOPLEFT", 0, 0)
+    proxy:Show()
+    self.bagParents[bag] = proxy
+    return proxy
+end
+
+function IB:GetLive(root, bag, slot)
+    local key = tostring(bag) .. ":" .. tostring(slot)
+    local button = self.liveBySlot[key]
+    if button then return button end
+    if InCombatLockdown and InCombatLockdown() then return nil end
+
+    local proxy = self:GetBagParent(root, bag)
+    if not proxy then return nil end
+    button = CreateLive(proxy, bag, slot)
+    self.liveBySlot[key] = button
+    return button
+end
+
+function IB:GetStatic(parent, index)
+    local button = self.staticPool[index]
+    if not button then
+        button = CreateStatic(parent, index)
+        self.staticPool[index] = button
+    elseif button:GetParent() ~= parent then
+        button:SetParent(parent)
     end
-    if not item.live then return end
-    if IsShiftKeyDown() and item.link and HandleModifiedItemClick then
-        if HandleModifiedItemClick(item.link) then return end
+    return button
+end
+
+local function UpdateDecoration(button, item)
+    button.fbItem = item
+    if item then
+        button.fbIcon:SetTexture(item.icon)
+        button.fbIcon:SetAlpha(1)
+    else
+        -- Empty live slots stay interactive, but visually remain a clean dark
+        -- cell instead of showing a pale frame texture.
+        button.fbIcon:SetTexture(nil)
+        button.fbIcon:SetAlpha(0)
     end
-    if not IB._warnedNoNative then
-        IB._warnedNoNative = true
-        FB:Print("Native bag slot was unavailable. Live item actions stay disabled rather than using a tainted direct container call.")
+    button.fbCount:SetText(item and item.count and item.count > 1 and tostring(item.count) or "")
+    button.fbItemLevel:SetText(item and item.itemLevel and item.itemLevel > 1 and item.category == "equipment" and tostring(item.itemLevel) or "")
+
+    local quality = item and item.quality or 1
+    local c = FB.Media.quality[quality] or FB.Media.quality[1]
+    button.fbSkin:SetBackdropBorderColor(c[1], c[2], c[3], item and 0.92 or 0.38)
+
+    button.fbFavorite:SetAlpha(item and item.favorite and 1 or 0.20)
+    button.fbBadge:Hide()
+    if item then
+        if item.tag == "keep" then
+            button.fbBadge:SetTexture(FB.Media:Icon("keep")); button.fbBadge:Show()
+        elseif item.tag == "sell" then
+            button.fbBadge:SetTexture(FB.Media:Icon("sell")); button.fbBadge:Show()
+        elseif item.tag == "bank" then
+            button.fbBadge:SetTexture(FB.Media:Icon("bank_badge")); button.fbBadge:Show()
+        end
+    end
+
+    local locked = item and item.locked
+    if button.fbIcon.SetDesaturated then button.fbIcon:SetDesaturated(locked and true or false) end
+    button:SetAlpha(locked and 0.60 or 1)
+
+    if button.fbCooldown then
+        if item and item.live and item.bag ~= nil and item.slot then
+            local start, duration, enable = FB.API:GetCooldown(item.bag, item.slot)
+            if duration and duration > 0 then
+                if CooldownFrame_Set then
+                    CooldownFrame_Set(button.fbCooldown, start or 0, duration or 0, enable or 0)
+                elseif button.fbCooldown.SetCooldown then
+                    button.fbCooldown:SetCooldown(start or 0, duration or 0)
+                end
+                button.fbCooldown:Show()
+            else
+                button.fbCooldown:Hide()
+            end
+        else
+            button.fbCooldown:Hide()
+        end
     end
 end
 
-FB:On("LOGIN", function()
-    C_Timer.After(0, function() IB:PrewarmInventory() end)
-end)
-FB:On("BANK_OPEN", function()
-    C_Timer.After(0, function() IB:PrewarmBank() end)
-end)
-FB:On("PLAYER_REGEN_ENABLED", function()
-    IB:PrewarmInventory()
-    if FB.state.bankOpen then IB:PrewarmBank() end
-end)
+function IB:SetLive(button, item)
+    if not button or not item or item.bag == nil or not item.slot then return end
+
+    -- Bag identity lives on the parent proxy and slot identity is assigned once
+    -- when this physical slot button is created. Never rewrite secure identity.
+    button.hasItem = item.itemID ~= nil
+    button.readable = item.readable and true or false
+
+    -- Keep stock state coherent for Blizzard's own click/drag code. Visuals are
+    -- still drawn by the ForeverBags skin on top.
+    if SetItemButtonTexture then
+        SetItemButtonTexture(button, item.icon or "Interface\\PaperDoll\\UI-Backpack-EmptySlot")
+    end
+    if SetItemButtonCount then
+        SetItemButtonCount(button, item.count or 0)
+    end
+    if SetItemButtonDesaturated then
+        SetItemButtonDesaturated(button, item.locked and true or false)
+    end
+
+    UpdateDecoration(button, item)
+end
+
+function IB:SetEmpty(button, empty)
+    if not button or not empty or empty.bag == nil or not empty.slot then return end
+
+    button.hasItem = false
+    button.readable = false
+
+    if SetItemButtonTexture then
+        SetItemButtonTexture(button, "Interface\\PaperDoll\\UI-Backpack-EmptySlot")
+    end
+    if SetItemButtonCount then SetItemButtonCount(button, 0) end
+    if SetItemButtonDesaturated then SetItemButtonDesaturated(button, false) end
+
+    UpdateDecoration(button, nil)
+end
+
+function IB:SetStatic(button, item)
+    if not button then return end
+    UpdateDecoration(button, item)
+end
+
+function IB:HideAll()
+    for _, button in pairs(self.liveBySlot) do button:Hide() end
+    for i = 1, #self.staticPool do self.staticPool[i]:Hide() end
+end
+
+function IB:Prewarm(parent)
+    if InCombatLockdown and InCombatLockdown() then return end
+    local bags = FB.API:GetBagRange()
+    for i = 1, #bags do
+        local bag = bags[i]
+        local slots = FB.API:GetNumSlots(bag) or 0
+        for slot = 1, slots do
+            self:GetLive(parent or UIParent, bag, slot)
+        end
+    end
+end

@@ -64,7 +64,7 @@ function FB:BuildMainFrame()
     self.currentView = self.currentView or "bags"
     self.currentCategory = self.currentCategory or "all"
     self.searchText = self.searchText or ""
-    self.itemButtons, self.headerPool, self.emptySlots = {}, {}, {}
+    self.staticItemButtons, self.headerPool, self.emptySlots = {}, {}, {}
 
     if self.settings.windowPoint then
         local p = self.settings.windowPoint
@@ -84,7 +84,7 @@ function FB:BuildMainFrame()
     title:SetPoint("TOPLEFT", titleIcon, "TOPRIGHT", 4, -6); title:SetText("ForeverBags"); title:SetTextColor(0.96,0.85,0.62)
     title:SetShadowColor(0,0,0,1); title:SetShadowOffset(1,-1)
     local sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 2, -3); sub:SetText("inventory • bank • alts • discoveries"); sub:SetTextColor(0.57,0.67,0.68)
+    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 2, -3); sub:SetText("inventory • alts • discoveries"); sub:SetTextColor(0.57,0.67,0.68)
     local credit = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     credit:SetPoint("LEFT", title, "RIGHT", 8, -1); credit:SetText("by 0xgle")
     credit:SetWidth(58); credit:SetWordWrap(false); credit:SetJustifyH("LEFT")
@@ -168,7 +168,7 @@ function FB:BuildMainFrame()
     self.footer = footer
 
     self.viewButtons = {}
-    local viewMeta = {{"bags",L.BAGS,"bag"},{"bank",L.BANK,"bank"},{"alts",L.ALTS,"alts"},{"discoveries",L.DISCOVERIES,"discovery"}}
+    local viewMeta = {{"bags",L.BAGS,"bag"},{"alts",L.ALTS,"alts"},{"discoveries",L.DISCOVERIES,"discovery"}}
     local last
     for i=1,#viewMeta do
         local id,label,iconName = unpack(viewMeta[i])
@@ -210,9 +210,17 @@ function FB:CategoryMatch(item, category)
     return item.category == category
 end
 
-function FB:GetPooledItemButton(index)
-    local b=self.itemButtons[index]
-    if not b then b=FB.ItemButton:Create(self.scrollChild); self.itemButtons[index]=b end
+function FB:GetPooledItemButton(index, live, item)
+    if live then
+        if not item then return nil end
+        return FB.ItemButton:GetLive(self.scrollChild, item.bag, item.slot)
+    end
+
+    local b = self.staticItemButtons[index]
+    if not b then
+        b = FB.ItemButton:GetStatic(self.scrollChild, index)
+        self.staticItemButtons[index] = b
+    end
     return b
 end
 
@@ -251,6 +259,10 @@ end
 function FB:Refresh()
     if not self.frame then return end
     self:RefreshMoney()
+    if InCombatLockdown and InCombatLockdown() then
+        self._pendingCombatBagRefresh = true
+        return
+    end
     self.frame:SetScale(self.settings.scale or 1)
     for id,b in pairs(self.categoryButtons) do FB.Media:SetButtonBackdrop(b, id==self.currentCategory) end
     for id,b in pairs(self.viewButtons) do FB.Media:SetButtonBackdrop(b, id==self.currentView) end
@@ -258,7 +270,7 @@ function FB:Refresh()
     local sortLabels={slot=L.SORT_BAGS,name=L.SORT_NAME,quality=L.SORT_QUALITY,count=L.SORT_COUNT,value=L.SORT_VALUE}
     self.sortButton.text:SetText(sortLabels[self.settings.sort] or L.SORT_BAGS)
 
-    local items, free, total, cached = self.Data:GetView(self.currentView)
+    local items, free, total, cached, physicalEmptySlots = self.Data:GetView(self.currentView)
     local filtered={}
     local categoryCounts={}
     for id in pairs(self.categoryButtons) do categoryCounts[id]=0 end
@@ -279,7 +291,7 @@ function FB:Refresh()
     end
     self.Data:Sort(filtered)
 
-    for i=1,#self.itemButtons do self.itemButtons[i]:Hide() end
+    FB.ItemButton:HideAll()
     for i=1,#self.headerPool do self.headerPool[i]:Hide() end
     for i=1,#self.emptySlots do self.emptySlots[i]:Hide() end
 
@@ -301,7 +313,13 @@ function FB:Refresh()
         local col=0
         for i=1,#list do
             buttonIndex=buttonIndex+1
-            local b=self:GetPooledItemButton(buttonIndex); b:SetSize(size,size); b:ClearAllPoints(); b:SetPoint("TOPLEFT",x0+col*(size+gap),y); FB.ItemButton:SetItem(b,list[i]); b:Show()
+            local live = self.currentView == "bags" and list[i].live
+            local b=self:GetPooledItemButton(buttonIndex, live, list[i])
+            if b then
+                b:SetSize(size,size); b:ClearAllPoints(); b:SetPoint("TOPLEFT",x0+col*(size+gap),y)
+                if live then FB.ItemButton:SetLive(b,list[i]) else FB.ItemButton:SetStatic(b,list[i]) end
+                b:Show()
+            end
             col=col+1
             if col>=columns then col=0; y=y-size-gap end
         end
@@ -323,10 +341,20 @@ function FB:Refresh()
 
     if self.currentView=="bags" and self.settings.showEmptySlots and free and free>0 and self.currentCategory=="all" and self.searchText=="" then
         local col=0
-        for i=1,math.min(free,40) do
+        local empties = physicalEmptySlots or {}
+        for i=1,math.min(#empties,40) do
             emptyIndex=emptyIndex+1
-            local e=self:GetEmptySlot(emptyIndex); e:SetSize(size,size); e:ClearAllPoints(); e:SetPoint("TOPLEFT",x0+col*(size+gap),y); e:Show()
-            col=col+1; if col>=columns then col=0; y=y-size-gap end
+            buttonIndex=buttonIndex+1
+            local e=self:GetPooledItemButton(buttonIndex, true, empties[i])
+            if e then
+                e:SetSize(size,size)
+                e:ClearAllPoints()
+                e:SetPoint("TOPLEFT",x0+col*(size+gap),y)
+                FB.ItemButton:SetEmpty(e, empties[i])
+                e:Show()
+            end
+            col=col+1
+            if col>=columns then col=0; y=y-size-gap end
         end
         if col>0 then y=y-size-gap end
     end
@@ -336,8 +364,6 @@ function FB:Refresh()
     if self.currentView=="bags" then
         local junk=FB.Merchant:GetJunkValue()
         self.stats:SetText(string.format("%s: %d / %d\n%s: %s",L.FREE_SLOTS,free or 0,total or 0,L.JUNK_VALUE,FB:FormatMoney(junk)))
-    elseif self.currentView=="bank" then
-        self.stats:SetText((cached and (L.BANK_CACHED.."   •   ") or "")..tostring(#filtered).." items")
     else
         self.stats:SetText(tostring(#filtered).." items")
     end
@@ -358,17 +384,32 @@ end
 
 FB:On("LOGIN", function()
     FB:BuildMainFrame()
+    C_Timer.After(0, function()
+        if not (InCombatLockdown and InCombatLockdown()) then
+            FB.ItemButton:Prewarm(FB.scrollChild)
+            FB:Refresh()
+        end
+    end)
     SLASH_FOREVERBAGS1="/fb"
     SLASH_FOREVERBAGS2="/foreverbags"
     SlashCmdList.FOREVERBAGS=function(msg)
         msg=(msg or ""):lower()
         if msg=="settings" or msg=="config" then FB.SettingsUI:Toggle()
-        elseif msg=="bank" then FB.currentView="bank"; FB:BuildMainFrame():Show(); FB:Refresh()
+        elseif msg=="bank" then FB:Print("Bank is handled by the native WoW bank UI.")
         elseif msg=="reset" then FB.settings.windowPoint=nil; if FB.frame then FB.frame:ClearAllPoints(); FB.frame:SetPoint("CENTER") end
         elseif msg=="version" then
             FB:Print(FB.version .. " • Interface " .. tostring(select(4, GetBuildInfo())) .. " • project " .. tostring(WOW_PROJECT_ID))
         elseif msg=="native" then
             FB:Print("native integration=" .. tostring(FB.settings.nativeBagIntegration ~= false) .. " • ToggleBackpack=" .. tostring(type(_G.ToggleBackpack) == "function") .. " • C_Container=" .. tostring(C_Container ~= nil))
+        elseif msg=="containers" then
+            FB:Print(FB.API:DebugContainers())
+        elseif msg=="blocked" then
+            local b = FB.state.lastBlocked
+            if b then
+                FB:Print(tostring(b.event) .. " • " .. tostring(b.addon) .. " • " .. tostring(b.action))
+            else
+                FB:Print("No blocked action captured this session.")
+            end
         else FB:Toggle() end
     end
 end)
@@ -379,3 +420,10 @@ FB:On("SETTINGS_CHANGED", function() if FB.frame then FB:Refresh() end end)
 FB:On("MERCHANT_OPEN", function() if FB.frame and FB.frame:IsShown() then FB:Refresh() end end)
 FB:On("MERCHANT_CLOSE", function() if FB.frame and FB.frame:IsShown() then FB:Refresh() end end)
 FB:On("PLAYER_MONEY", function() FB:RefreshMoney() end)
+
+FB:On("PLAYER_REGEN_ENABLED", function()
+    if FB._pendingCombatBagRefresh then
+        FB._pendingCombatBagRefresh = nil
+        FB:Refresh()
+    end
+end)

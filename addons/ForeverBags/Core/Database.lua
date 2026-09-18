@@ -1,7 +1,7 @@
 local _, FB = ...
 
 local DEFAULTS = {
-    version = 1,
+    version = 3,
     settings = {
         scale = 1.0,
         columns = 10,
@@ -33,7 +33,16 @@ end
 
 function FB:InitDB()
     if type(ForeverBagsDB) ~= "table" then ForeverBagsDB = {} end
+    local previousVersion = tonumber(ForeverBagsDB.version) or 0
     MergeDefaults(ForeverBagsDB, DEFAULTS)
+
+    -- v3 replaces the old click-overlay experiment with taint-safe post-hooks.
+    -- Enable backpack/bag-bar integration for existing users as part of the migration.
+    if previousVersion < 3 then
+        ForeverBagsDB.settings.nativeBagIntegration = true
+    end
+    ForeverBagsDB.version = DEFAULTS.version
+
     self.db = ForeverBagsDB
     self.settings = self.db.settings
     local key = self:CharacterKey()
